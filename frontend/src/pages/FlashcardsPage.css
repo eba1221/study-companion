@@ -1,0 +1,674 @@
+/* frontend/src/pages/FlashcardsPage.css — read-only + subject/topic filters + mascot + centered study */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;0,9..40,900;1,9..40,300&display=swap');
+
+/* ─── Layout ───────────────────────────────────────────────────── */
+.fcGrid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  align-items: start;
+  flex: 1;
+}
+
+@media (max-width: 1100px) {
+  .fcGrid { grid-template-columns: 1fr; }
+}
+
+.fcDecks,
+.fcMain {
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.fcDecks::-webkit-scrollbar,
+.fcMain::-webkit-scrollbar { width: 5px; }
+.fcDecks::-webkit-scrollbar-track,
+.fcMain::-webkit-scrollbar-track { background: transparent; }
+.fcDecks::-webkit-scrollbar-thumb,
+.fcMain::-webkit-scrollbar-thumb {
+  background: rgba(47, 22, 11, 0.12);
+  border-radius: 999px;
+}
+
+/* ─── Filter row in topbar ─────────────────────────────────────── */
+.fcFilters {
+  flex: 1;
+  min-width: 360px;
+}
+.fcFilters .fcInput {
+  width: 100%;
+  max-width: 240px;
+}
+@media (max-width: 1100px) {
+  .fcFilters { min-width: 0; }
+  .fcFilters .fcInput { max-width: 100%; }
+}
+
+/* ─── Topbar overrides ──────────────────────────────────────────── */
+
+/* Segmented pill control */
+.pills {
+  display: flex;
+  gap: 0;
+  background: rgba(47, 22, 11, 0.07);
+  border-radius: 999px;
+  padding: 4px;
+  position: relative;
+}
+
+.pill {
+  padding: 7px 18px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: rgba(47, 22, 11, 0.55);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+  position: relative;
+  z-index: 1;
+}
+
+.pill:hover { color: var(--ink); }
+
+.pillActive {
+  background: var(--surface, #faf8f4);
+  color: var(--ink);
+  box-shadow: 0 2px 8px rgba(47, 22, 11, 0.12);
+}
+
+/* ─── Utility row ───────────────────────────────────────────────── */
+.fcRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ─── Inputs ────────────────────────────────────────────────────── */
+.fcInput {
+  width: 100%;
+  background: rgba(246, 242, 234, 0.75);
+  border: 1px solid rgba(47, 22, 11, 0.12);
+  border-radius: 10px;
+  padding: 9px 13px;
+  outline: none;
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  transition: box-shadow 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.fcInput:focus {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(47, 22, 11, 0.28);
+  box-shadow: 0 0 0 3px rgba(47, 22, 11, 0.07);
+}
+
+.fcInput::placeholder { color: rgba(47, 22, 11, 0.38); }
+
+/* ─── Buttons ───────────────────────────────────────────────────── */
+.fcBtn {
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(47, 22, 11, 0.13);
+  background: rgba(246, 242, 234, 0.92);
+  color: rgba(47, 22, 11, 0.75);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.fcBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(47, 22, 11, 0.13);
+  border-color: rgba(47, 22, 11, 0.22);
+  color: var(--ink);
+}
+
+.fcBtn:active { transform: translateY(0) scale(0.98); }
+
+/* Primary */
+.fcBtnAccent {
+  background: var(--ink);
+  color: #faf8f4;
+  border-color: var(--ink);
+  font-weight: 900;
+}
+.fcBtnAccent:hover {
+  background: #1a0a05;
+  color: #faf8f4;
+  box-shadow: 0 8px 22px rgba(47, 22, 11, 0.30);
+}
+
+/* Sage */
+.fcBtnSage {
+  background: var(--sage, #B8D49C);
+  color: #1e3010;
+  border-color: var(--sage, #B8D49C);
+  font-weight: 900;
+}
+.fcBtnSage:hover {
+  background: #a8c88c;
+  border-color: #a8c88c;
+  box-shadow: 0 8px 22px rgba(90, 130, 50, 0.22);
+}
+
+/* Ghost */
+.fcBtnGhost {
+  background: transparent;
+  border-color: rgba(47, 22, 11, 0.10);
+  color: rgba(47, 22, 11, 0.55);
+}
+.fcBtnGhost:hover {
+  background: rgba(47, 22, 11, 0.05);
+  border-color: rgba(47, 22, 11, 0.18);
+  color: var(--ink);
+}
+
+/* ─── Deck list ─────────────────────────────────────────────────── */
+.fcDeckList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.fcDeckItem {
+  border: 1px solid rgba(47, 22, 11, 0.11);
+  background: rgba(246, 242, 234, 0.70);
+  border-radius: 12px;
+  padding: 11px 14px 11px 16px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* coloured left accent bar */
+.fcDeckItem::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 999px 0 0 999px;
+  background: var(--sage, #B8D49C);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.fcDeckItem:hover {
+  transform: translateX(2px);
+  box-shadow: 0 4px 16px rgba(47, 22, 11, 0.10);
+  border-color: rgba(47, 22, 11, 0.18);
+}
+
+.fcDeckItem.active {
+  background: #fff;
+  border-color: rgba(47, 22, 11, 0.20);
+  box-shadow: 0 4px 20px rgba(47, 22, 11, 0.10);
+}
+
+.fcDeckItem.active::before { opacity: 1; }
+
+.fcDeckName {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 900;
+  color: var(--ink);
+  font-size: 13.5px;
+  flex: 1;
+}
+
+.fcDeckMeta {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: rgba(47, 22, 11, 0.45);
+  background: rgba(47, 22, 11, 0.06);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ─── Card list ─────────────────────────────────────────────────── */
+.fcList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.fcListItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(47, 22, 11, 0.10);
+  background: rgba(246, 242, 234, 0.70);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.fcListItem:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(47, 22, 11, 0.10);
+  border-color: rgba(47, 22, 11, 0.18);
+  background: rgba(255, 255, 255, 0.80);
+}
+
+@media (max-width: 780px) {
+  .fcListItem { flex-direction: column; }
+}
+
+.fcListText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fcListItem .planTitle {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 900;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.fcListItem .planMeta {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: rgba(47, 22, 11, 0.58);
+  line-height: 1.45;
+}
+
+/* Browse cards watermark mascot */
+.fcListCard {
+  position: relative;
+  overflow: hidden;
+}
+
+.fcListMascot {
+  position: absolute;
+  right: 14px;
+  bottom: -8px;
+  width: 70px;
+  opacity: 0.14;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 10px 18px rgba(47, 22, 11, 0.08));
+}
+
+/* ─── Empty state ───────────────────────────────────────────────── */
+.fcEmpty {
+  padding: 32px 20px;
+  border-radius: 16px;
+  border: 1.5px dashed rgba(47, 22, 11, 0.14);
+  background: rgba(246, 242, 234, 0.40);
+  text-align: center;
+}
+
+.fcEmptyImg {
+  width: 112px;
+  height: auto;
+  margin: 0 auto 14px;
+  display: block;
+  opacity: 0.95;
+  filter: drop-shadow(0 10px 18px rgba(47, 22, 11, 0.10));
+}
+
+.fcDoneImg {
+  width: 122px;
+  height: auto;
+  margin: 0 auto 14px;
+  display: block;
+  opacity: 0.95;
+  filter: drop-shadow(0 10px 18px rgba(47, 22, 11, 0.10));
+}
+
+/* ─── Study mode ────────────────────────────────────────────────── */
+.fcStudyWrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.fcStudyStage {
+  flex: 1;                 /* takes remaining space */
+  display: flex;
+  align-items: center;     /* vertical centering */
+  justify-content: center; /* horizontal centering */
+  padding: 10px 0 20px;
+}
+
+/* Progress bar */
+.fcProgressTrack {
+  width: 100%;
+  height: 3px;
+  background: rgba(47, 22, 11, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 2px;
+}
+
+.fcProgressFill {
+  height: 100%;
+  background: var(--sage, #B8D49C);
+  border-radius: 999px;
+  transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Flip card stage */
+.fcStudyCard {
+  width: 100%;
+  max-width: 640px;      /* slightly tighter */
+  height: 340px;         /* slightly more elegant */
+  border-radius: 28px;
+  margin: 0 auto;
+
+  border: 1px solid rgba(47, 22, 11, 0.10);
+  background: linear-gradient(
+    145deg,
+    #ffffff 0%,
+    rgba(246, 242, 234, 0.96) 100%
+  );
+
+  box-shadow:
+    0 30px 80px rgba(47, 22, 11, 0.12),
+    0 10px 24px rgba(47, 22, 11, 0.08);
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fcStudyCard:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 40px 100px rgba(47, 22, 11, 0.16),
+    0 14px 28px rgba(47, 22, 11, 0.10);
+}
+
+.fcStudyInner {
+  position: relative;
+  width: 100%;
+  height: 100%;           /* ✅ FIX: match the card exactly */
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transition: transform 560ms cubic-bezier(0.34, 1.2, 0.64, 1);
+  will-change: transform;
+}
+
+@media (max-width: 780px) {
+  .fcStudyInner { min-height: 320px; }
+}
+
+.fcStudyInner.isFlipped {
+  transform: rotateY(180deg);
+}
+
+.fcStudyFace {
+  position: absolute;
+  inset: 0;
+  padding: 34px 40px;     /* slightly reduced */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 24px;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+@media (max-width: 780px) {
+  .fcStudyFace { padding: 30px 26px; }
+}
+
+.fcStudyFront {
+  background: linear-gradient(145deg, #fff 0%, rgba(246, 242, 234, 0.95) 100%);
+  transform: translateZ(1px);
+}
+
+.fcStudyBack {
+  background: linear-gradient(145deg, rgba(184, 212, 156, 0.18) 0%, rgba(246, 242, 234, 0.95) 100%);
+  transform: rotateY(180deg) translateZ(1px);
+}
+
+/* Mascot sticker ON the flashcard */
+.fcCardMascot {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 54px;
+  height: auto;
+  opacity: 0.92;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 10px 18px rgba(47, 22, 11, 0.10));
+}
+
+@media (max-width: 780px) {
+  .fcCardMascot {
+    width: 44px;
+    top: 14px;
+    right: 14px;
+  }
+}
+
+.fcStudyHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 22, 11, 0.10);
+  background: rgba(47, 22, 11, 0.04);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: rgba(47, 22, 11, 0.45);
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: fcFadeIn 0.3s ease 0.15s forwards;
+}
+
+@keyframes fcFadeIn {
+  to { opacity: 1; }
+}
+
+.fcStudyText {
+  font-family: 'DM Serif Display', serif;
+  font-size: 30px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.35;
+  letter-spacing: -0.2px;
+}
+
+@media (max-width: 780px) {
+  .fcStudyText { font-size: 26px; }
+}
+
+.fcStudyFront .fcStudyText { font-style: normal; }
+
+.fcStudyBack .fcStudyText {
+  font-style: italic;
+  color: rgba(47, 22, 11, 0.82);
+}
+
+/* Card counter */
+.fcStudyCounter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(47, 22, 11, 0.45);
+  letter-spacing: 0.3px;
+}
+
+/* Done panel */
+.fcDone {
+  padding: 40px 28px;
+  border-radius: 20px;
+  border: 1px solid rgba(47, 22, 11, 0.12);
+  background: linear-gradient(145deg, rgba(184, 212, 156, 0.12), rgba(246, 242, 234, 0.80));
+  text-align: center;
+  animation: fcSlideIn 0.3s ease;
+}
+
+@keyframes fcSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fcDone .continueTitle {
+  font-family: 'DM Serif Display', serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.fcDone .continueMeta {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(47, 22, 11, 0.58);
+  margin-bottom: 20px;
+}
+
+/* ---------------- Study layout centre stage ---------------- */
+.fcStudyWrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.fcStudyStage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;      /* horizontal centre */
+  justify-content: center;  /* vertical centre */
+  gap: 14px;
+  padding: 10px 0 20px;
+}
+
+/* ---------------- Card sizing (stable) ---------------- */
+.fcStudyCard {
+  width: 100%;
+  max-width: 640px;
+  height: 360px;
+  border-radius: 28px;
+  position: relative;
+  margin: 0 auto;
+  cursor: pointer;
+  border: 1px solid rgba(47, 22, 11, 0.12);
+  box-shadow: 0 18px 60px rgba(47, 22, 11, 0.12);
+  background: transparent;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+@media (max-width: 780px) {
+  .fcStudyCard {
+    height: 320px;
+    max-width: 92%;
+  }
+}
+
+.fcStudyInner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transition: transform 560ms cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.fcStudyInner.isFlipped {
+  transform: rotateY(180deg);
+}
+
+/* Faces already absolute - keep them fitting */
+.fcStudyFace {
+  border-radius: 28px;
+}
+
+/* ---------------- Mascot on the card ---------------- */
+.fcMascotOnCard {
+  position: absolute;
+  right: 18px;
+  top: 16px;
+  width: 66px;
+  height: auto;
+  z-index: 5;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 16px rgba(47, 22, 11, 0.18));
+  opacity: 0.95;
+}
+
+@media (max-width: 780px) {
+  .fcMascotOnCard {
+    width: 56px;
+    right: 14px;
+    top: 14px;
+  }
+}
+
+/* ---------------- Sorting row ---------------- */
+.fcSortRow {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ---------------- Pile counters (chips) ---------------- */
+.fcPileChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 900;
+  font-size: 12px;
+  border: 1px solid rgba(47, 22, 11, 0.10);
+  background: rgba(255, 255, 255, 0.55);
+  color: rgba(47, 22, 11, 0.70);
+}
+
+.fcPileChipKnown {
+  background: rgba(184, 212, 156, 0.35);
+  border-color: rgba(184, 212, 156, 0.65);
+}
+
+.fcPileChipUnknown {
+  background: rgba(200, 50, 50, 0.10);
+  border-color: rgba(200, 50, 50, 0.22);
+}
+
+.fcBtn svg {
+  margin-right: 6px;
+}
+
+.fcPileChip svg {
+  margin-right: 6px;
+}
