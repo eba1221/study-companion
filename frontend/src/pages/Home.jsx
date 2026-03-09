@@ -1,5 +1,5 @@
 import "./Home.css";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
 
 import StudyingImg from "../assets/Studying.png";
@@ -7,10 +7,21 @@ import QuizImg from "../assets/Quiz.png";
 import DiagramsImg from "../assets/Diagrams.png";
 import WaveGif from "../assets/Wave.GIF";
 
-// ✅ Lucide icons
-import { Home as HomeIcon, Settings, User } from "lucide-react";
+import { Home as HomeIcon, Settings, LogOut } from "lucide-react";
+
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("sc_user"));
+  } catch {
+    return null;
+  }
+}
 
 export default function Home() {
+  const navigate = useNavigate();
+  const user = getStoredUser();
+  const displayName = user?.display_name || user?.email?.split("@")[0] || "there";
+
   const [tasks, setTasks] = useState([
     { id: "t1", title: "Daily warm-up", desc: "Answer 5 quick questions", done: true },
     { id: "t2", title: "Review weak topic", desc: "Cell transport booster", done: false },
@@ -32,7 +43,6 @@ export default function Home() {
   function addTask() {
     const title = newTask.trim();
     if (!title) return;
-
     setTasks(prev => [
       ...prev,
       { id: crypto.randomUUID(), title, desc: "", done: false },
@@ -44,27 +54,29 @@ export default function Home() {
     setTasks(prev => prev.filter(t => t.id !== id));
   }
 
+  function handleLogout() {
+    localStorage.removeItem("sc_user");
+    navigate("/auth");
+  }
+
   return (
     <div className="shell">
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sideLogo">SC</div>
 
-        {/* ✅ Lucide Home icon */}
         <Link className="navBtn navBtnActive" to="/" title="Home" aria-label="Home">
           <HomeIcon className="navLucide" size={22} />
         </Link>
 
         <div style={{ flex: 1 }} />
 
-        {/* ✅ Lucide Settings icon */}
         <button className="navBtn" title="Settings" aria-label="Settings">
           <Settings className="navLucide" size={22} />
         </button>
 
-        {/* ✅ Lucide Profile icon */}
-        <button className="navBtn" title="Profile" aria-label="Profile">
-          <User className="navLucide" size={22} />
+        <button className="navBtn" title="Logout" aria-label="Logout" onClick={handleLogout}>
+          <LogOut className="navLucide" size={22} />
         </button>
       </aside>
 
@@ -82,10 +94,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Hero - Enhanced */}
+        {/* Hero */}
         <section className="hero">
           <div className="heroCopy">
-            <h1 className="heroTitle">Welcome back, Ayesha</h1>
+            <h1 className="heroTitle">Welcome back, {displayName}</h1>
             <p className="heroSub">Let's pick up where you left off.</p>
 
             <div className="heroStats">
@@ -141,7 +153,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Stats - Navigation Cards */}
+        {/* Nav Cards */}
         <section className="statsRow">
           <Link className="card navCard" to="/learn">
             <div className="cardTop">
@@ -192,9 +204,7 @@ export default function Home() {
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
               placeholder="Add a task…"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") addTask();
-              }}
+              onKeyDown={(e) => { if (e.key === "Enter") addTask(); }}
             />
             <button onClick={addTask}>Add</button>
           </div>

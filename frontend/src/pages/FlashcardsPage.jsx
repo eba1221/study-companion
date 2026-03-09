@@ -1,264 +1,184 @@
-// QuizPage.jsx - AI-Powered Quiz with Database Integration
+// frontend/src/pages/FlashcardsPage.jsx
+
 import "./Learn.css";
-import "./Quiz.css";
+import "./FlashcardsPage.css";
+
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { Home as HomeIcon, BookOpen, Settings, User } from "lucide-react";
-import mascotImg from "../assets/Quiz.png";
+import { useEffect, useMemo, useState } from "react";
+import { Home as HomeIcon, BookOpen, Settings, User, Check, X, Search } from "lucide-react";
 
-const LETTERS = ["A", "B", "C", "D"];
-const USER_ID = 1; // Your dev user
+import booksMascot from "../assets/Books.png";
+import { getDecks, getCards, getSubjects, getTopicsBySubject } from "../api";
 
-export default function QuizPage() {
-  useEffect(() => {
-    document.title = "Quiz | Study Coach";
-  }, []);
+export default function FlashcardsPage() {
+  const [decks, setDecks] = useState([]);
+  const [activeDeckId, setActiveDeckId] = useState(null);
+  const [cards, setCards] = useState([]);
 
-  // Stage management
-  const [stage, setStage] = useState("setup"); // setup | generating | quiz | results
-
-  // Setup state
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [selectedTopic, setSelectedTopic] = useState("");
-  const [tier, setTier] = useState("foundation");
+  const [activeSubjectId, setActiveSubjectId] = useState("ALL");
+  const [activeTopicId, setActiveTopicId] = useState("ALL");
 
-  // Quiz state
-  const [quiz, setQuiz] = useState(null);
-  const [questions, setQuestions] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [answers, setAnswers] = useState({});
-  const [startTime, setStartTime] = useState(null);
+  const [mode, setMode] = useState("manage");
+  const [query, setQuery] = useState("");
 
-  // Results state
-  const [results, setResults] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [studyQueue, setStudyQueue] = useState([]);
+  const [studyIndex, setStudyIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
 
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [pileKnown, setPileKnown] = useState([]);
+  const [pileUnknown, setPileUnknown] = useState([]);
 
-  // Load subjects on mount
+  const [busy, setBusy] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // Load decks + subjects on mount
   useEffect(() => {
-    loadSubjects();
-    loadHistory();
+    let alive = true;
+    (async () => {
+      try {
+        setBusy(true);
+        setErrorMsg("");
+        const [ds, subs] = await Promise.all([getDecks(), getSubjects()]);
+        if (!alive) return;
+        setDecks(Array.isArray(ds) ? ds : []);
+        setSubjects(Array.isArray(subs) ? subs : []);
+        setActiveSubjectId("ALL");
+        setActiveTopicId("ALL");
+        const firstId = Array.isArray(ds) && ds.length ? ds[0].id : null;
+        setActiveDeckId(firstId);
+      } catch (e) {
+        if (!alive) return;
+        setErrorMsg(e?.message || "Failed to load decks/subjects");
+      } finally {
+        if (alive) setBusy(false);
+      }
+    })();
+    return () => { alive = false; };
   }, []);
 
   // Load topics when subject changes
   useEffect(() => {
-    if (selectedSubject) {
-      loadTopics(selectedSubject);
-    } else {
-      setTopics([]);
-      setSelectedTopic("");
-    }
-  }, [selectedSubject]);
-
-  const loadSubjects = async () => {
-    try {
-      const res = await fetch("http://localhost:3001/api/subjects", {
-        headers: { "x-user-id": USER_ID },
-      });
-      const data = await res.json();
-      setSubjects(data);
-    } catch (err) {
-      console.error("Failed to load subjects:", err);
-    }
-  };
-
-  const loadTopics = async (subjectId) => {
-    try {
-      const res = await fetch(
-        `http://localhost:3001/api/subjects/${subjectId}/topics`,
-        { headers: { "x-user-id": USER_ID } }
-      );
-      const data = await res.json();
-      setTopics(data);
-    } catch (err) {
-      console.error("Failed to load topics:", err);
-    }
-  };
-
-  const loadHistory = async () => {
-    try {
-      const res = await fetch(
-        `http://localhost:3001/api/quiz/history/${USER_ID}`,
-        { headers: { "x-user-id": USER_ID } }
-      );
-      const data = await res.json();
-      setHistory(data.attempts || []);
-    } catch (err) {
-      console.error("Failed to load history:", err);
-    }
-  };
-
-  const generateQuiz = async () => {
-    if (!selectedTopic) {
-      setError("Please select a topic");
-      return;
-    }
-
-    setError("");
-    setLoading(true);
-    setStage("generating");
-
-    try {
-      const res = await fetch("http://localhost:3001/api/quiz/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": USER_ID,
-        },
-        body: JSON.stringify({
-          topicId: selectedTopic,
-          tier,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Failed to generate quiz");
-      }
-
-      const data = await res.json();
-      await loadQuiz(data.quizId);
-    } catch (err) {
-      console.error("Quiz generation error:", err);
-      setError(err.message || "Failed to generate quiz");
-      setStage("setup");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadQuiz = async (quizId) => {
-    try {
-      const res = await fetch(`http://localhost:3001/api/quiz/${quizId}`, {
-        headers: { "x-user-id": USER_ID },
-      });
-      const data = await res.json();
-
-      setQuiz(data.quiz);
-      setQuestions(data.questions);
-      setCurrentIndex(0);
-      setSelected(null);
-      setAnswers({});
-      setStartTime(Date.now());
-      setStage("quiz");
-    } catch (err) {
-      console.error("Failed to load quiz:", err);
-      setError("Failed to load quiz");
-      setStage("setup");
-    }
-  };
-
-  const submitAnswer = () => {
-    if (selected === null) return;
-
-    const questionId = questions[currentIndex].id;
-    const userAnswer = LETTERS[selected];
-
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: userAnswer,
-    }));
-
-    setSelected(null);
-
-    if (currentIndex + 1 >= questions.length) {
-      // All questions answered - submit quiz
-      submitQuiz({ ...answers, [questionId]: userAnswer });
-    } else {
-      setCurrentIndex((i) => i + 1);
-    }
-  };
-
-  const submitQuiz = async (finalAnswers) => {
-    const timeTaken = Math.round((Date.now() - startTime) / 1000); // seconds
-
-    try {
-      const res = await fetch(
-        `http://localhost:3001/api/quiz/${quiz.id}/submit`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-user-id": USER_ID,
-          },
-          body: JSON.stringify({
-            answers: finalAnswers,
-            timeTaken,
-          }),
+    let alive = true;
+    (async () => {
+      try {
+        setErrorMsg("");
+        if (activeSubjectId === "ALL") {
+          setTopics([]);
+          setActiveTopicId("ALL");
+          return;
         }
-      );
+        const ts = await getTopicsBySubject(activeSubjectId);
+        if (!alive) return;
+        setTopics(Array.isArray(ts) ? ts : []);
+        setActiveTopicId("ALL");
+      } catch (e) {
+        if (!alive) return;
+        setErrorMsg(e?.message || "Failed to load topics");
+      }
+    })();
+    return () => { alive = false; };
+  }, [activeSubjectId]);
 
-      const data = await res.json();
-      setResults(data);
-      setStage("results");
-      loadHistory(); // Refresh history
-    } catch (err) {
-      console.error("Failed to submit quiz:", err);
-      setError("Failed to submit quiz");
-    }
-  };
+  // Filter decks by subject + topic
+  const filteredDecks = useMemo(() => {
+    const wantedSubject = activeSubjectId === "ALL" ? null : Number(activeSubjectId);
+    const wantedTopic = activeTopicId === "ALL" ? null : Number(activeTopicId);
+    return decks.filter((d) => {
+      const deckSubject = d.subject_id ?? d.subjectId ?? null;
+      const deckTopic = d.topic_id ?? d.topicId ?? null;
+      const subjOk = wantedSubject === null ? true : deckSubject !== null && Number(deckSubject) === wantedSubject;
+      const topicOk = wantedTopic === null ? true : deckTopic !== null && Number(deckTopic) === wantedTopic;
+      return subjOk && topicOk;
+    });
+  }, [decks, activeSubjectId, activeTopicId]);
 
-  const resetQuiz = () => {
-    setStage("setup");
-    setQuiz(null);
-    setQuestions([]);
-    setCurrentIndex(0);
-    setSelected(null);
-    setAnswers({});
-    setResults(null);
-    setError("");
-  };
-
-  const currentQuestion = questions[currentIndex];
-  const progressPct = questions.length
-    ? Math.round(((currentIndex + 1) / questions.length) * 100)
-    : 0;
-
-  // Keyboard shortcuts
+  // Keep active deck valid when filters change
   useEffect(() => {
-    if (stage !== "quiz") return;
+    if (!filteredDecks.length) { setActiveDeckId(null); return; }
+    if (!filteredDecks.some((d) => d.id === activeDeckId)) {
+      setActiveDeckId(filteredDecks[0].id);
+    }
+  }, [filteredDecks]);
 
-    const onKeyDown = (e) => {
-      const k = e.key.toLowerCase();
+  const activeDeck = useMemo(
+    () => filteredDecks.find((d) => d.id === activeDeckId) || null,
+    [filteredDecks, activeDeckId]
+  );
 
-      // A/B/C/D select
-      const letterIdx = LETTERS.map((x) => x.toLowerCase()).indexOf(k);
-      if (letterIdx >= 0 && currentQuestion) {
-        setSelected(letterIdx);
-        return;
+  // Load cards when activeDeckId changes
+  useEffect(() => {
+    if (!activeDeckId) { setCards([]); return; }
+    let alive = true;
+    (async () => {
+      try {
+        setErrorMsg("");
+        const cs = await getCards(activeDeckId);
+        if (!alive) return;
+        setCards(Array.isArray(cs) ? cs : []);
+      } catch (e) {
+        if (!alive) return;
+        setErrorMsg(e?.message || "Failed to load cards");
       }
+    })();
+    return () => { alive = false; };
+  }, [activeDeckId]);
 
-      // Arrow navigation
-      if (k === "arrowdown" || k === "arrowright") {
-        e.preventDefault();
-        setSelected((s) => (s === null ? 0 : Math.min(s + 1, 3)));
-      }
-      if (k === "arrowup" || k === "arrowleft") {
-        e.preventDefault();
-        setSelected((s) => (s === null ? 0 : Math.max(s - 1, 0)));
-      }
+  const filteredCards = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return cards;
+    return cards.filter(
+      (c) => String(c.front || "").toLowerCase().includes(q) || String(c.back || "").toLowerCase().includes(q)
+    );
+  }, [cards, query]);
 
-      // Enter submits
-      if (k === "enter") {
-        e.preventDefault();
-        submitAnswer();
-      }
+  const resetSessionState = () => {
+    setStudyQueue([]);
+    setStudyIndex(0);
+    setIsFlipped(false);
+    setPileKnown([]);
+    setPileUnknown([]);
+  };
 
-      // Escape quits
-      if (k === "escape") {
-        e.preventDefault();
-        resetQuiz();
-      }
-    };
+  const startStudy = (sourceCards = cards) => {
+    if (!activeDeck || sourceCards.length === 0) return;
+    const queue = [...sourceCards].sort((a, b) => a.id - b.id).map((c) => c.id);
+    setStudyQueue(queue);
+    setStudyIndex(0);
+    setIsFlipped(false);
+    setPileKnown([]);
+    setPileUnknown([]);
+    setMode("study");
+  };
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [stage, currentQuestion, selected]);
+  const currentCard = useMemo(() => {
+    if (!activeDeck || studyQueue.length === 0) return null;
+    const id = studyQueue[studyIndex];
+    return cards.find((c) => c.id === id) || null;
+  }, [activeDeck, studyQueue, studyIndex, cards]);
+
+  const flipCard = () => setIsFlipped((v) => !v);
+
+  const pushToPile = (which) => {
+    if (!currentCard) return;
+    const id = currentCard.id;
+    if (which === "known") setPileKnown((p) => [...p, id]);
+    if (which === "unknown") setPileUnknown((p) => [...p, id]);
+    setIsFlipped(false);
+    setStudyIndex((i) => Math.min(i + 1, studyQueue.length));
+  };
+
+  const exitStudy = () => { setMode("manage"); resetSessionState(); };
+
+  const done = mode === "study" && (!currentCard || studyIndex >= studyQueue.length);
+  const progressPct = studyQueue.length ? Math.round((studyIndex / studyQueue.length) * 100) : 0;
+  const deckCount = filteredDecks.length;
+
+  const unknownCards = useMemo(() => {
+    const set = new Set(pileUnknown);
+    return cards.filter((c) => set.has(c.id));
+  }, [cards, pileUnknown]);
 
   return (
     <div className="learnShell">
@@ -268,18 +188,8 @@ export default function QuizPage() {
         <Link className="navBtn" to="/" title="Home" aria-label="Home">
           <HomeIcon className="navLucide" size={22} />
         </Link>
-        <Link className="navBtn" to="/learn" title="Learn" aria-label="Learn">
+        <Link className="navBtn navBtnActive" to="/flashcards" title="Flashcards" aria-label="Flashcards">
           <BookOpen className="navLucide" size={22} />
-        </Link>
-        <Link
-          className="navBtn navBtnActive"
-          to="/quiz"
-          title="Quiz"
-          aria-label="Quiz"
-        >
-          <span className="navLucide" style={{ fontWeight: 900 }}>
-            ?
-          </span>
         </Link>
         <div style={{ flex: 1 }} />
         <button className="navBtn" title="Settings" aria-label="Settings">
@@ -292,341 +202,233 @@ export default function QuizPage() {
 
       {/* Main */}
       <main className="main">
+        {/* Topbar */}
         <div className="topbar">
-          <div className="search">
-            🔎
-            <input placeholder="Generate AI quiz from your flashcards..." />
+          <div className="fcRow fcFilters">
+            <select
+              className="fcInput"
+              value={activeSubjectId}
+              onChange={(e) => setActiveSubjectId(e.target.value)}
+              disabled={busy}
+            >
+              <option value="ALL">All subjects</option>
+              {subjects.map((s) => (
+                <option key={s.id} value={String(s.id)}>{s.name}</option>
+              ))}
+            </select>
+
+            <select
+              className="fcInput"
+              value={activeTopicId}
+              onChange={(e) => setActiveTopicId(e.target.value)}
+              disabled={busy || activeSubjectId === "ALL"}
+            >
+              <option value="ALL">All topics</option>
+              {topics.map((t) => (
+                <option key={t.id} value={String(t.id)}>{t.name}</option>
+              ))}
+            </select>
           </div>
+
+          <div className="search">
+            <Search size={14} style={{ opacity: 0.45 }} />
+            <input
+              placeholder="Search cards..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              disabled={busy}
+            />
+          </div>
+
           <div className="pills">
-            <div className="pill pillActive">AI Quiz</div>
-            <div className="pill">
-              History: {history.length} attempt{history.length !== 1 ? "s" : ""}
+            <button className={`pill ${mode === "manage" ? "pillActive" : ""}`} onClick={() => setMode("manage")}>
+              Browse
+            </button>
+            <button
+              className={`pill ${mode === "study" ? "pillActive" : ""}`}
+              onClick={() => startStudy(cards)}
+              disabled={!activeDeck || cards.length === 0}
+              style={{ opacity: !activeDeck || cards.length === 0 ? 0.6 : 1 }}
+            >
+              Study
+            </button>
+            <div className="pill" style={{ cursor: "default" }}>
+              {deckCount} Deck{deckCount !== 1 ? "s" : ""}
             </div>
           </div>
         </div>
 
-        <section className="quizGrid">
-          {/* Main card */}
-          <div className="card quizCardLike">
-            <div className="quizHeaderRow">
-              <div>
-                <div className="cardLabel">AI-Powered Practice</div>
-                <h1 className="quizTitle">Quiz</h1>
-              </div>
-              <div className="quizMascotHalo">
-                <img
-                  className="quizMascotImg"
-                  src={mascotImg}
-                  alt="Quiz mascot"
-                />
-              </div>
+        {errorMsg && (
+          <div className="card" style={{ marginBottom: 12, padding: 12 }}>
+            <div className="planMeta" style={{ fontWeight: 800 }}>{errorMsg}</div>
+          </div>
+        )}
+
+        <section className="fcGrid">
+          {/* Left: Decks */}
+          <div className="card fcDecks">
+            <div className="cardHeaderRow">
+              <div className="cardTitle">Decks</div>
+              <div className="chip">{deckCount}</div>
             </div>
 
-            {/* SETUP STAGE */}
-            {stage === "setup" && (
-              <>
-                <p className="quizSub">
-                  Select a topic and tier. AI will generate 10 GCSE-style
-                  questions from your flashcards.
-                </p>
-
-                <div className="quizSetupGrid">
-                  <label className="quizLabel">
-                    Subject
-                    <select
-                      className="quizSelect"
-                      value={selectedSubject}
-                      onChange={(e) => setSelectedSubject(e.target.value)}
-                    >
-                      <option value="">Choose subject...</option>
-                      {subjects.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="quizLabel">
-                    Topic
-                    <select
-                      className="quizSelect"
-                      value={selectedTopic}
-                      onChange={(e) => setSelectedTopic(e.target.value)}
-                      disabled={!selectedSubject}
-                    >
-                      <option value="">Choose topic...</option>
-                      {topics.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-
-                <label className="quizLabel">
-                  Tier
-                  <div style={{ display: "flex", gap: "12px" }}>
-                    <button
-                      className={`quizChoiceBtn ${
-                        tier === "foundation" ? "active" : ""
-                      }`}
-                      onClick={() => setTier("foundation")}
-                      style={{ flex: 1 }}
-                    >
-                      Foundation
-                    </button>
-                    <button
-                      className={`quizChoiceBtn ${
-                        tier === "higher" ? "active" : ""
-                      }`}
-                      onClick={() => setTier("higher")}
-                      style={{ flex: 1 }}
-                    >
-                      Higher
-                    </button>
-                  </div>
-                </label>
-
-                {error && <p className="quizWarn">{error}</p>}
-
-                <div className="quizButtonRow">
-                  <button
-                    className="primaryBtn"
-                    onClick={generateQuiz}
-                    disabled={!selectedTopic || loading}
-                  >
-                    {loading ? "Generating..." : "Generate Quiz →"}
-                  </button>
-                  <button
-                    className="ghostBtn"
-                    onClick={() => {
-                      setSelectedSubject("");
-                      setSelectedTopic("");
-                      setTier("foundation");
-                      setError("");
-                    }}
-                  >
-                    Reset
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* GENERATING STAGE */}
-            {stage === "generating" && (
-              <div style={{ textAlign: "center", padding: "40px 20px" }}>
-                <div
-                  style={{
-                    fontSize: "48px",
-                    marginBottom: "16px",
-                    animation: "pulse 1.5s ease-in-out infinite",
-                  }}
-                >
-                  🤖
-                </div>
-                <h3 style={{ margin: 0, marginBottom: "8px" }}>
-                  AI is generating your quiz...
-                </h3>
-                <p style={{ color: "rgba(58, 30, 16, 0.68)", fontSize: "14px" }}>
-                  This may take 10-20 seconds
-                </p>
+            {filteredDecks.length === 0 ? (
+              <div className="fcEmpty" style={{ marginTop: 12 }}>
+                <div className="cardTitle">No decks found</div>
+                <div className="planMeta">Try a different subject or topic.</div>
               </div>
-            )}
-
-            {/* QUIZ STAGE */}
-            {stage === "quiz" && currentQuestion && (
-              <>
-                <div className="quizProgressMeta">
-                  <span>
-                    Question {currentIndex + 1} of {questions.length}
-                  </span>
-                  <span className="quizTopicBadge">
-                    {tier.charAt(0).toUpperCase() + tier.slice(1)} Tier
-                  </span>
-                </div>
-
-                <div className="quizProgressWrap">
-                  <div
-                    className="quizProgressFill"
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
-
-                <h2 className="quizQuestion animate-fade">
-                  {currentQuestion.question_text}
-                </h2>
-
-                <div className="quizChoices">
-                  {[
-                    currentQuestion.option_a,
-                    currentQuestion.option_b,
-                    currentQuestion.option_c,
-                    currentQuestion.option_d,
-                  ].map((option, i) => (
-                    <button
-                      key={i}
-                      className={`quizChoiceBtn ${
-                        selected === i ? "active" : ""
-                      }`}
-                      data-letter={LETTERS[i]}
-                      onClick={() => setSelected(i)}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="quizButtonRow">
+            ) : (
+              <div className="fcDeckList">
+                {filteredDecks.map((d) => (
                   <button
-                    className="primaryBtn"
-                    onClick={submitAnswer}
-                    disabled={selected === null}
+                    key={d.id}
+                    className={`fcDeckItem ${d.id === activeDeckId ? "active" : ""}`}
+                    onClick={() => { setActiveDeckId(d.id); setMode("manage"); setQuery(""); resetSessionState(); }}
                   >
-                    Submit answer
+                    <div className="fcDeckName">{d.name}</div>
+                    <div className="fcDeckMeta">{d.id === activeDeckId ? cards.length : "·"}</div>
                   </button>
-                  <button className="ghostBtn" onClick={resetQuiz}>
-                    Quit
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* RESULTS STAGE */}
-            {stage === "results" && results && (
-              <>
-                <div className="quizResultsTop">
-                  <div>
-                    <div className="cardLabel">Results</div>
-                    <div className="quizScoreLine">
-                      <span className="quizScoreBig">{results.score}</span>
-                      <span className="quizScoreSmall">
-                        / {results.totalQuestions} correct
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        marginTop: "8px",
-                        fontSize: "16px",
-                        fontWeight: 700,
-                        color: "rgba(58, 30, 16, 0.7)",
-                      }}
-                    >
-                      {results.percentage}%
-                    </div>
-                  </div>
-                  <div className="pill">
-                    {results.percentage === 100
-                      ? "Perfect 🎉"
-                      : `${results.totalQuestions - results.score} missed`}
-                  </div>
-                </div>
-
-                <div className="quizButtonRow">
-                  <button className="primaryBtn" onClick={resetQuiz}>
-                    New quiz →
-                  </button>
-                  <button
-                    className="ghostBtn"
-                    onClick={() => loadQuiz(quiz.id)}
-                  >
-                    Retry same quiz
-                  </button>
-                </div>
-
-                <div className="quizReviewSection">
-                  <h3 className="quizReviewTitle">Review answers</h3>
-
-                  {results.percentage === 100 ? (
-                    <div className="quizPerfectBox" />
-                  ) : (
-                    <div className="quizReviewList">
-                      {results.results
-                        .filter((r) => !r.isCorrect)
-                        .map((result, idx) => {
-                          const q = questions.find(
-                            (q) => q.id === result.questionId
-                          );
-                          return (
-                            <div key={idx} className="quizReviewCard">
-                              <div className="quizReviewQ">
-                                {q.question_text}
-                              </div>
-
-                              <div className="quizReviewRow">
-                                <span className="quizReviewRowLabel">
-                                  Your answer
-                                </span>
-                                <span className="quizIncorrect">
-                                  {result.userAnswer}:{" "}
-                                  {
-                                    q[
-                                      `option_${result.userAnswer.toLowerCase()}`
-                                    ]
-                                  }
-                                </span>
-                              </div>
-
-                              <div className="quizReviewRow">
-                                <span className="quizReviewRowLabel">
-                                  Correct
-                                </span>
-                                <span className="quizCorrect">
-                                  {result.correctAnswer}:{" "}
-                                  {
-                                    q[
-                                      `option_${result.correctAnswer.toLowerCase()}`
-                                    ]
-                                  }
-                                </span>
-                              </div>
-
-                              {result.explanation && (
-                                <div className="quizExplanation">
-                                  {result.explanation}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                    </div>
-                  )}
-                </div>
-              </>
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Side card */}
-          <div className="card quizSideCard">
-            <div className="cardLabel">Recent attempts</div>
-            <div className="quizTipTitle">Quiz History</div>
-
-            {history.length === 0 ? (
-              <p className="quizTipText">
-                No quizzes taken yet. Generate your first AI quiz!
-              </p>
-            ) : (
-              <div className="quizMiniStats">
-                {history.slice(0, 5).map((attempt) => (
-                  <div key={attempt.id} className="quizMiniStat">
-                    <div>
-                      <div className="quizMiniLabel">{attempt.topic_name}</div>
-                      <div
-                        style={{
-                          fontSize: "11px",
-                          color: "rgba(58, 30, 16, 0.5)",
-                          marginTop: "2px",
-                        }}
-                      >
-                        {attempt.tier} • {new Date(attempt.completed_at).toLocaleDateString()}
-                      </div>
+          {/* Right: Main */}
+          <div className="card fcMain">
+            {!activeDeck ? (
+              <div className="fcEmpty">
+                <div className="cardTitle">No deck selected</div>
+                <div className="planMeta">Pick a deck from the left.</div>
+              </div>
+            ) : mode === "study" ? (
+              <div className="fcStudyWrap">
+                {/* Header */}
+                <div className="cardHeaderRow">
+                  <div>
+                    <div className="cardTitle">Study mode</div>
+                    <div className="planMeta">{activeDeck.name}</div>
+                  </div>
+                  <div className="fcRow">
+                    <div className="fcPileChip fcPileChipKnown">
+                      <Check size={11} /> {pileKnown.length}
                     </div>
-                    <div className="quizMiniValue">
-                      {attempt.score}/{attempt.total_questions}
+                    <div className="fcPileChip fcPileChipUnknown">
+                      <X size={11} /> {pileUnknown.length}
+                    </div>
+                    <button className="fcBtn fcBtnGhost" onClick={exitStudy}>Exit</button>
+                  </div>
+                </div>
+
+                {/* Progress */}
+                <div className="fcProgressTrack">
+                  <div className="fcProgressFill" style={{ width: `${progressPct}%` }} />
+                </div>
+
+                {done ? (
+                  <div className="fcDone">
+                    <div className="continueTitle">All done</div>
+                    <div className="continueMeta">
+                      Known: <b>{pileKnown.length}</b> · Unsure: <b>{pileUnknown.length}</b>
+                    </div>
+                    <div className="fcRow" style={{ marginTop: 16, justifyContent: "center" }}>
+                      <button
+                        className="fcBtn fcBtnSage"
+                        onClick={() => startStudy(unknownCards)}
+                        disabled={pileUnknown.length === 0}
+                        style={{ opacity: pileUnknown.length === 0 ? 0.5 : 1 }}
+                      >
+                        Study unsure pile
+                      </button>
+                      <button className="fcBtn fcBtnAccent" onClick={() => startStudy(cards)}>
+                        Study all again
+                      </button>
+                      <button className="fcBtn" onClick={exitStudy}>Back to browse</button>
                     </div>
                   </div>
-                ))}
+                ) : (
+                  <div className="fcStudyStage">
+                    {/* Flip card */}
+                    <div
+                      className="fcStudyCard"
+                      onClick={flipCard}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flipCard(); }
+                        if (e.key === "1") pushToPile("unknown");
+                        if (e.key === "2") pushToPile("known");
+                      }}
+                    >
+                      <img src={booksMascot} className="fcMascotOnCard" alt="" draggable="false" />
+
+                      <div className={`fcStudyInner ${isFlipped ? "isFlipped" : ""}`}>
+                        <div className="fcStudyFace fcStudyFront">
+                          <div className="fcStudyHint">Question · click to reveal</div>
+                          <div className="fcStudyText">{currentCard?.front}</div>
+                        </div>
+                        <div className="fcStudyFace fcStudyBack">
+                          <div className="fcStudyHint">Answer · click to flip back</div>
+                          <div className="fcStudyText">{currentCard?.back}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sort controls */}
+                    <div className="fcSortRow">
+                      <button className="fcBtn fcBtnGhost" onClick={() => pushToPile("unknown")} title="Shortcut: 1">
+                        <X size={14} /> I don't know this
+                      </button>
+                      <button className="fcBtn fcBtnSage" onClick={() => pushToPile("known")} title="Shortcut: 2">
+                        <Check size={14} /> I know this
+                      </button>
+                    </div>
+
+                    {/* Counter */}
+                    <div className="fcStudyCounter">
+                      <span>{Math.min(studyIndex + 1, studyQueue.length)} / {studyQueue.length}</span>
+                      <span className="planMeta" style={{ fontWeight: 800 }}>
+                        Press 1 to skip · 2 to mark known
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div className="cardHeaderRow">
+                  <div>
+                    <div className="cardTitle">{activeDeck.name}</div>
+                    <div className="planMeta">{cards.length} card{cards.length !== 1 ? "s" : ""}</div>
+                  </div>
+                  <div className="fcRow">
+                    <button
+                      className="fcBtn fcBtnAccent"
+                      onClick={() => startStudy(cards)}
+                      disabled={cards.length === 0}
+                      style={{ opacity: cards.length === 0 ? 0.45 : 1 }}
+                    >
+                      Study
+                    </button>
+                  </div>
+                </div>
+
+                <div className="fcList">
+                  {filteredCards.length === 0 ? (
+                    <div className="fcEmpty">
+                      <div className="cardTitle">No cards found</div>
+                      <div className="planMeta">Try a different search or choose another deck.</div>
+                    </div>
+                  ) : (
+                    filteredCards.map((c) => (
+                      <div key={c.id} className="fcListItem">
+                        <div className="fcListText">
+                          <div className="planTitle">{c.front}</div>
+                          <div className="planMeta">{c.back}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             )}
           </div>

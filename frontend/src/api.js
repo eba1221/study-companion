@@ -22,7 +22,6 @@ export function clearStoredUser() {
 }
 
 function getUserIdForHeader() {
-  // In dev, fall back to "1" so your middleware keeps working.
   const user = getStoredUser();
   return String(user?.id ?? "1");
 }
@@ -32,7 +31,6 @@ function getUserIdForHeader() {
 function headers(extra = {}) {
   return {
     "Content-Type": "application/json",
-    // ✅ dev header used by requireUser middleware
     "x-user-id": getUserIdForHeader(),
     ...extra,
   };
@@ -40,8 +38,6 @@ function headers(extra = {}) {
 
 async function asJson(res) {
   const text = await res.text();
-
-  // Try JSON first
   try {
     const data = text ? JSON.parse(text) : null;
     if (!res.ok) {
@@ -49,7 +45,6 @@ async function asJson(res) {
     }
     return data;
   } catch {
-    // If server returned HTML (e.g. Cannot GET /route) or plain text
     if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
     return text;
   }
@@ -88,13 +83,11 @@ async function DEL(path) {
 
 /* ---------------- Health ---------------- */
 
-// ✅ pick ONE health route and use it consistently
-// Your App.jsx is calling /api/health/db, so keep that.
 export async function dbHealth() {
   return GET("/api/health/db");
 }
 
-/* ---------------- Auth endpoints (only works once you add them on backend) ---------------- */
+/* ---------------- Auth ---------------- */
 
 export async function login(payload) {
   const data = await POST("/api/auth/login", payload);
@@ -104,7 +97,8 @@ export async function login(payload) {
 }
 
 export async function register(payload) {
-  const data = await POST("/api/auth/register", payload);
+  // ✅ fixed: was /api/auth/register, must match backend route /api/auth/signup
+  const data = await POST("/api/auth/signup", payload);
   const user = data?.user ?? data;
   if (user?.id) setStoredUser(user);
   return data;
@@ -157,12 +151,6 @@ export async function getDecks() {
   return GET("/api/decks");
 }
 
-/**
- * NOTE:
- * You said you want to remove adding/deleting cards (and likely deck authoring) from the UI.
- * Keeping these exports is harmless (useful for admin/dev seeding), but simply don't call them
- * from your FlashcardsPage.
- */
 export async function createDeck(name) {
   return POST("/api/decks", { name });
 }
@@ -181,9 +169,6 @@ export async function getCards(deckId) {
   return GET(`/api/decks/${deckId}/cards`);
 }
 
-/**
- * Same note as above: keep for dev/admin usage, but remove from the UI.
- */
 export async function addCard(deckId, front, back) {
   return POST(`/api/decks/${deckId}/cards`, { front, back });
 }

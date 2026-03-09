@@ -1,4 +1,4 @@
-/* frontend/src/pages/FlashcardsPage.css — read-only + subject/topic filters + mascot + centered study */
+/* frontend/src/pages/FlashcardsPage.css */
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;0,9..40,900;1,9..40,300&display=swap');
 
@@ -47,8 +47,6 @@
 }
 
 /* ─── Topbar overrides ──────────────────────────────────────────── */
-
-/* Segmented pill control */
 .pills {
   display: flex;
   gap: 0;
@@ -123,6 +121,9 @@
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
@@ -136,7 +137,6 @@
 
 .fcBtn:active { transform: translateY(0) scale(0.98); }
 
-/* Primary */
 .fcBtnAccent {
   background: var(--ink);
   color: #faf8f4;
@@ -149,7 +149,6 @@
   box-shadow: 0 8px 22px rgba(47, 22, 11, 0.30);
 }
 
-/* Sage */
 .fcBtnSage {
   background: var(--sage, #B8D49C);
   color: #1e3010;
@@ -162,7 +161,6 @@
   box-shadow: 0 8px 22px rgba(90, 130, 50, 0.22);
 }
 
-/* Ghost */
 .fcBtnGhost {
   background: transparent;
   border-color: rgba(47, 22, 11, 0.10);
@@ -197,7 +195,6 @@
   overflow: hidden;
 }
 
-/* coloured left accent bar */
 .fcDeckItem::before {
   content: '';
   position: absolute;
@@ -294,23 +291,6 @@
   line-height: 1.45;
 }
 
-/* Browse cards watermark mascot */
-.fcListCard {
-  position: relative;
-  overflow: hidden;
-}
-
-.fcListMascot {
-  position: absolute;
-  right: 14px;
-  bottom: -8px;
-  width: 70px;
-  opacity: 0.14;
-  pointer-events: none;
-  user-select: none;
-  filter: drop-shadow(0 10px 18px rgba(47, 22, 11, 0.08));
-}
-
 /* ─── Empty state ───────────────────────────────────────────────── */
 .fcEmpty {
   padding: 32px 20px;
@@ -320,37 +300,22 @@
   text-align: center;
 }
 
-.fcEmptyImg {
-  width: 112px;
-  height: auto;
-  margin: 0 auto 14px;
-  display: block;
-  opacity: 0.95;
-  filter: drop-shadow(0 10px 18px rgba(47, 22, 11, 0.10));
-}
-
-.fcDoneImg {
-  width: 122px;
-  height: auto;
-  margin: 0 auto 14px;
-  display: block;
-  opacity: 0.95;
-  filter: drop-shadow(0 10px 18px rgba(47, 22, 11, 0.10));
-}
-
 /* ─── Study mode ────────────────────────────────────────────────── */
 .fcStudyWrap {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  gap: 16px;
+  perspective: 1400px;
+  width: 100%;
 }
 
 .fcStudyStage {
-  flex: 1;                 /* takes remaining space */
   display: flex;
-  align-items: center;     /* vertical centering */
-  justify-content: center; /* horizontal centering */
-  padding: 10px 0 20px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
 }
 
 /* Progress bar */
@@ -370,70 +335,60 @@
   transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Flip card stage */
+/* ─── Flip card ─────────────────────────────────────────────────── */
 .fcStudyCard {
+  border-radius: 24px;
+  border: 1px solid rgba(47, 22, 11, 0.12);
+  background: transparent;
+  box-shadow: 0 14px 46px rgba(47, 22, 11, 0.12);
+  cursor: pointer;
+  min-height: 320px;
   width: 100%;
-  max-width: 640px;      /* slightly tighter */
-  height: 340px;         /* slightly more elegant */
-  border-radius: 28px;
-  margin: 0 auto;
-
-  border: 1px solid rgba(47, 22, 11, 0.10);
-  background: linear-gradient(
-    145deg,
-    #ffffff 0%,
-    rgba(246, 242, 234, 0.96) 100%
-  );
-
-  box-shadow:
-    0 30px 80px rgba(47, 22, 11, 0.12),
-    0 10px 24px rgba(47, 22, 11, 0.08);
-
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .fcStudyCard:hover {
-  transform: translateY(-4px);
-  box-shadow:
-    0 40px 100px rgba(47, 22, 11, 0.16),
-    0 14px 28px rgba(47, 22, 11, 0.10);
+  box-shadow: 0 22px 64px rgba(47, 22, 11, 0.16);
+  transform: translateY(-2px);
 }
 
+/* ── Inner wrapper — NO overflow:hidden (breaks 3D flip) ── */
 .fcStudyInner {
   position: relative;
   width: 100%;
-  height: 100%;           /* ✅ FIX: match the card exactly */
+  min-height: 320px;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
   transition: transform 560ms cubic-bezier(0.34, 1.2, 0.64, 1);
   will-change: transform;
 }
 
-@media (max-width: 780px) {
-  .fcStudyInner { min-height: 320px; }
-}
-
 .fcStudyInner.isFlipped {
   transform: rotateY(180deg);
 }
 
+/* ── Faces ── */
 .fcStudyFace {
   position: absolute;
   inset: 0;
-  padding: 34px 40px;     /* slightly reduced */
+  padding: 32px 40px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: flex-start;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   border-radius: 24px;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
+  overflow-y: auto;
 }
 
 @media (max-width: 780px) {
-  .fcStudyFace { padding: 30px 26px; }
+  .fcStudyFace { padding: 28px 24px; }
 }
 
 .fcStudyFront {
@@ -446,27 +401,21 @@
   transform: rotateY(180deg) translateZ(1px);
 }
 
-/* Mascot sticker ON the flashcard */
-.fcCardMascot {
+/* ─── Mascot on card ────────────────────────────────────────────── */
+.fcMascotOnCard {
   position: absolute;
   top: 18px;
   right: 18px;
-  width: 54px;
+  width: 48px;
   height: auto;
-  opacity: 0.92;
+  opacity: 0.85;
   pointer-events: none;
   user-select: none;
   filter: drop-shadow(0 10px 18px rgba(47, 22, 11, 0.10));
+  z-index: 10;
 }
 
-@media (max-width: 780px) {
-  .fcCardMascot {
-    width: 44px;
-    top: 14px;
-    right: 14px;
-  }
-}
-
+/* ─── Study hint pill ───────────────────────────────────────────── */
 .fcStudyHint {
   display: inline-flex;
   align-items: center;
@@ -481,7 +430,8 @@
   letter-spacing: 0.9px;
   text-transform: uppercase;
   color: rgba(47, 22, 11, 0.45);
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
   opacity: 0;
   animation: fcFadeIn 0.3s ease 0.15s forwards;
 }
@@ -490,27 +440,62 @@
   to { opacity: 1; }
 }
 
+/* ─── Card text ─────────────────────────────────────────────────── */
 .fcStudyText {
   font-family: 'DM Serif Display', serif;
-  font-size: 30px;
+  font-size: 20px;
   font-weight: 400;
   color: var(--ink);
-  line-height: 1.35;
-  letter-spacing: -0.2px;
+  line-height: 1.55;
+  letter-spacing: -0.1px;
+  word-break: break-word;
 }
 
 @media (max-width: 780px) {
-  .fcStudyText { font-size: 26px; }
+  .fcStudyText { font-size: 17px; }
 }
 
 .fcStudyFront .fcStudyText { font-style: normal; }
-
 .fcStudyBack .fcStudyText {
   font-style: italic;
   color: rgba(47, 22, 11, 0.82);
 }
 
-/* Card counter */
+/* ─── Sort row ──────────────────────────────────────────────────── */
+.fcSortRow {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* ─── Pile chips ────────────────────────────────────────────────── */
+.fcPileChip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fcPileChipKnown {
+  background: rgba(46, 125, 50, 0.10);
+  border-color: rgba(46, 125, 50, 0.22);
+  color: #2e7d32;
+}
+
+.fcPileChipUnknown {
+  background: rgba(178, 59, 59, 0.08);
+  border-color: rgba(178, 59, 59, 0.20);
+  color: #b23b3b;
+}
+
+/* ─── Card counter ──────────────────────────────────────────────── */
 .fcStudyCounter {
   display: flex;
   align-items: center;
@@ -520,9 +505,10 @@
   font-weight: 800;
   color: rgba(47, 22, 11, 0.45);
   letter-spacing: 0.3px;
+  width: 100%;
 }
 
-/* Done panel */
+/* ─── Done panel ────────────────────────────────────────────────── */
 .fcDone {
   padding: 40px 28px;
   border-radius: 20px;
@@ -551,124 +537,4 @@
   font-weight: 600;
   color: rgba(47, 22, 11, 0.58);
   margin-bottom: 20px;
-}
-
-/* ---------------- Study layout centre stage ---------------- */
-.fcStudyWrap {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.fcStudyStage {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;      /* horizontal centre */
-  justify-content: center;  /* vertical centre */
-  gap: 14px;
-  padding: 10px 0 20px;
-}
-
-/* ---------------- Card sizing (stable) ---------------- */
-.fcStudyCard {
-  width: 100%;
-  max-width: 640px;
-  height: 360px;
-  border-radius: 28px;
-  position: relative;
-  margin: 0 auto;
-  cursor: pointer;
-  border: 1px solid rgba(47, 22, 11, 0.12);
-  box-shadow: 0 18px 60px rgba(47, 22, 11, 0.12);
-  background: transparent;
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-}
-
-@media (max-width: 780px) {
-  .fcStudyCard {
-    height: 320px;
-    max-width: 92%;
-  }
-}
-
-.fcStudyInner {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
-  transition: transform 560ms cubic-bezier(0.34, 1.2, 0.64, 1);
-}
-
-.fcStudyInner.isFlipped {
-  transform: rotateY(180deg);
-}
-
-/* Faces already absolute - keep them fitting */
-.fcStudyFace {
-  border-radius: 28px;
-}
-
-/* ---------------- Mascot on the card ---------------- */
-.fcMascotOnCard {
-  position: absolute;
-  right: 18px;
-  top: 16px;
-  width: 66px;
-  height: auto;
-  z-index: 5;
-  pointer-events: none;
-  filter: drop-shadow(0 6px 16px rgba(47, 22, 11, 0.18));
-  opacity: 0.95;
-}
-
-@media (max-width: 780px) {
-  .fcMascotOnCard {
-    width: 56px;
-    right: 14px;
-    top: 14px;
-  }
-}
-
-/* ---------------- Sorting row ---------------- */
-.fcSortRow {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  align-items: center;
-}
-
-/* ---------------- Pile counters (chips) ---------------- */
-.fcPileChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-family: "DM Sans", sans-serif;
-  font-weight: 900;
-  font-size: 12px;
-  border: 1px solid rgba(47, 22, 11, 0.10);
-  background: rgba(255, 255, 255, 0.55);
-  color: rgba(47, 22, 11, 0.70);
-}
-
-.fcPileChipKnown {
-  background: rgba(184, 212, 156, 0.35);
-  border-color: rgba(184, 212, 156, 0.65);
-}
-
-.fcPileChipUnknown {
-  background: rgba(200, 50, 50, 0.10);
-  border-color: rgba(200, 50, 50, 0.22);
-}
-
-.fcBtn svg {
-  margin-right: 6px;
-}
-
-.fcPileChip svg {
-  margin-right: 6px;
 }

@@ -6,6 +6,7 @@ import Quiz from "./pages/Quiz";
 import Analytics from "./pages/Analytics";
 import FlashcardsPage from "./pages/FlashcardsPage";
 import Auth from "./pages/Auth";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const pageVariants = {
   initial: { opacity: 0, y: 6, filter: "blur(2px)" },
@@ -18,8 +19,9 @@ const pageVariants = {
   exit: {
     opacity: 0,
     y: -6,
-    filter: "blur(2px)" },
+    filter: "blur(2px)",
     transition: { duration: 0.16, ease: "easeIn" },
+  },
 };
 
 function Page({ children }) {
@@ -42,26 +44,35 @@ export default function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Page><Home /></Page>} />
 
-        {/* ✅ LOGIN / REGISTER */}
+        {/* Public route */}
         <Route path="/auth" element={<Page><Auth /></Page>} />
 
-        {/* ✅ Learn now goes directly to Flashcards */}
+        {/* Protected routes */}
+        <Route path="/" element={
+          <ProtectedRoute><Page><Home /></Page></ProtectedRoute>
+        } />
+
+        <Route path="/flashcards" element={
+          <ProtectedRoute><Page><FlashcardsPage /></Page></ProtectedRoute>
+        } />
+
+        <Route path="/quiz" element={
+          <ProtectedRoute><Page><Quiz /></Page></ProtectedRoute>
+        } />
+
+        <Route path="/analytics" element={
+          <ProtectedRoute><Page><Analytics /></Page></ProtectedRoute>
+        } />
+
+        {/* Redirects */}
         <Route path="/learn" element={<Navigate to="/flashcards" replace />} />
-
-        {/* ✅ Flashcards main route */}
-        <Route path="/flashcards" element={<Page><FlashcardsPage /></Page>} />
-
-        {/* ✅ Old routes kept as redirects so nothing breaks */}
         <Route path="/learn/flashcards" element={<Navigate to="/flashcards" replace />} />
         <Route path="/learn/notes" element={<Navigate to="/flashcards" replace />} />
 
-        <Route path="/quiz" element={<Page><Quiz /></Page>} />
-        <Route path="/analytics" element={<Page><Analytics /></Page>} />
-
-        {/* ✅ optional fallback so no "No routes matched" errors */}
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
+
       </Routes>
     </AnimatePresence>
   );

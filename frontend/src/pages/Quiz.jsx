@@ -7,7 +7,15 @@ import { Home as HomeIcon, BookOpen, Settings, User } from "lucide-react";
 import mascotImg from "../assets/Quiz.png";
 
 const LETTERS = ["A", "B", "C", "D"];
-const USER_ID = 1; // Your dev user
+
+// ✅ Always reads the logged-in user's real ID
+function getUserId() {
+  try {
+    return JSON.parse(localStorage.getItem("sc_user"))?.id ?? 1;
+  } catch {
+    return 1;
+  }
+}
 
 export default function QuizPage() {
   useEffect(() => {
@@ -58,7 +66,7 @@ export default function QuizPage() {
   const loadSubjects = async () => {
     try {
       const res = await fetch("http://localhost:3001/api/subjects", {
-        headers: { "x-user-id": USER_ID },
+        headers: { "x-user-id": getUserId() },
       });
       const data = await res.json();
       setSubjects(data);
@@ -71,7 +79,7 @@ export default function QuizPage() {
     try {
       const res = await fetch(
         `http://localhost:3001/api/subjects/${subjectId}/topics`,
-        { headers: { "x-user-id": USER_ID } }
+        { headers: { "x-user-id": getUserId() } }
       );
       const data = await res.json();
       setTopics(data);
@@ -82,9 +90,10 @@ export default function QuizPage() {
 
   const loadHistory = async () => {
     try {
+      const userId = getUserId();
       const res = await fetch(
-        `http://localhost:3001/api/quiz/history/${USER_ID}`,
-        { headers: { "x-user-id": USER_ID } }
+        `http://localhost:3001/api/quiz/history/${userId}`,
+        { headers: { "x-user-id": userId } }
       );
       const data = await res.json();
       setHistory(data.attempts || []);
@@ -108,7 +117,7 @@ export default function QuizPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-user-id": USER_ID,
+          "x-user-id": getUserId(),
         },
         body: JSON.stringify({
           topicId: selectedTopic,
@@ -135,7 +144,7 @@ export default function QuizPage() {
   const loadQuiz = async (quizId) => {
     try {
       const res = await fetch(`http://localhost:3001/api/quiz/${quizId}`, {
-        headers: { "x-user-id": USER_ID },
+        headers: { "x-user-id": getUserId() },
       });
       const data = await res.json();
 
@@ -167,7 +176,6 @@ export default function QuizPage() {
     setSelected(null);
 
     if (currentIndex + 1 >= questions.length) {
-      // All questions answered - submit quiz
       submitQuiz({ ...answers, [questionId]: userAnswer });
     } else {
       setCurrentIndex((i) => i + 1);
@@ -175,7 +183,7 @@ export default function QuizPage() {
   };
 
   const submitQuiz = async (finalAnswers) => {
-    const timeTaken = Math.round((Date.now() - startTime) / 1000); // seconds
+    const timeTaken = Math.round((Date.now() - startTime) / 1000);
 
     try {
       const res = await fetch(
@@ -184,7 +192,7 @@ export default function QuizPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-user-id": USER_ID,
+            "x-user-id": getUserId(),
           },
           body: JSON.stringify({
             answers: finalAnswers,
@@ -196,7 +204,7 @@ export default function QuizPage() {
       const data = await res.json();
       setResults(data);
       setStage("results");
-      loadHistory(); // Refresh history
+      loadHistory();
     } catch (err) {
       console.error("Failed to submit quiz:", err);
       setError("Failed to submit quiz");
@@ -226,14 +234,12 @@ export default function QuizPage() {
     const onKeyDown = (e) => {
       const k = e.key.toLowerCase();
 
-      // A/B/C/D select
       const letterIdx = LETTERS.map((x) => x.toLowerCase()).indexOf(k);
       if (letterIdx >= 0 && currentQuestion) {
         setSelected(letterIdx);
         return;
       }
 
-      // Arrow navigation
       if (k === "arrowdown" || k === "arrowright") {
         e.preventDefault();
         setSelected((s) => (s === null ? 0 : Math.min(s + 1, 3)));
@@ -243,13 +249,11 @@ export default function QuizPage() {
         setSelected((s) => (s === null ? 0 : Math.max(s - 1, 0)));
       }
 
-      // Enter submits
       if (k === "enter") {
         e.preventDefault();
         submitAnswer();
       }
 
-      // Escape quits
       if (k === "escape") {
         e.preventDefault();
         resetQuiz();
@@ -369,18 +373,14 @@ export default function QuizPage() {
                   Tier
                   <div style={{ display: "flex", gap: "12px" }}>
                     <button
-                      className={`quizChoiceBtn ${
-                        tier === "foundation" ? "active" : ""
-                      }`}
+                      className={`quizChoiceBtn ${tier === "foundation" ? "active" : ""}`}
                       onClick={() => setTier("foundation")}
                       style={{ flex: 1 }}
                     >
                       Foundation
                     </button>
                     <button
-                      className={`quizChoiceBtn ${
-                        tier === "higher" ? "active" : ""
-                      }`}
+                      className={`quizChoiceBtn ${tier === "higher" ? "active" : ""}`}
                       onClick={() => setTier("higher")}
                       style={{ flex: 1 }}
                     >
@@ -467,9 +467,7 @@ export default function QuizPage() {
                   ].map((option, i) => (
                     <button
                       key={i}
-                      className={`quizChoiceBtn ${
-                        selected === i ? "active" : ""
-                      }`}
+                      className={`quizChoiceBtn ${selected === i ? "active" : ""}`}
                       data-letter={LETTERS[i]}
                       onClick={() => setSelected(i)}
                     >
@@ -527,10 +525,7 @@ export default function QuizPage() {
                   <button className="primaryBtn" onClick={resetQuiz}>
                     New quiz →
                   </button>
-                  <button
-                    className="ghostBtn"
-                    onClick={() => loadQuiz(quiz.id)}
-                  >
+                  <button className="ghostBtn" onClick={() => loadQuiz(quiz.id)}>
                     Retry same quiz
                   </button>
                 </div>
@@ -545,40 +540,24 @@ export default function QuizPage() {
                       {results.results
                         .filter((r) => !r.isCorrect)
                         .map((result, idx) => {
-                          const q = questions.find(
-                            (q) => q.id === result.questionId
-                          );
+                          const q = questions.find((q) => q.id === result.questionId);
                           return (
                             <div key={idx} className="quizReviewCard">
-                              <div className="quizReviewQ">
-                                {q.question_text}
-                              </div>
+                              <div className="quizReviewQ">{q.question_text}</div>
 
                               <div className="quizReviewRow">
-                                <span className="quizReviewRowLabel">
-                                  Your answer
-                                </span>
+                                <span className="quizReviewRowLabel">Your answer</span>
                                 <span className="quizIncorrect">
                                   {result.userAnswer}:{" "}
-                                  {
-                                    q[
-                                      `option_${result.userAnswer.toLowerCase()}`
-                                    ]
-                                  }
+                                  {q[`option_${result.userAnswer.toLowerCase()}`]}
                                 </span>
                               </div>
 
                               <div className="quizReviewRow">
-                                <span className="quizReviewRowLabel">
-                                  Correct
-                                </span>
+                                <span className="quizReviewRowLabel">Correct</span>
                                 <span className="quizCorrect">
                                   {result.correctAnswer}:{" "}
-                                  {
-                                    q[
-                                      `option_${result.correctAnswer.toLowerCase()}`
-                                    ]
-                                  }
+                                  {q[`option_${result.correctAnswer.toLowerCase()}`]}
                                 </span>
                               </div>
 
@@ -619,7 +598,8 @@ export default function QuizPage() {
                           marginTop: "2px",
                         }}
                       >
-                        {attempt.tier} • {new Date(attempt.completed_at).toLocaleDateString()}
+                        {attempt.tier} •{" "}
+                        {new Date(attempt.completed_at).toLocaleDateString()}
                       </div>
                     </div>
                     <div className="quizMiniValue">
