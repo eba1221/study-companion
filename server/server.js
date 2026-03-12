@@ -596,6 +596,30 @@ app.post("/api/analytics/predict", requireUser, async (req, res) => {
     }
 
     const predictions = await mlRes.json();
+
+    // Compute daily study minutes — match by YYYY-MM-DD string
+    const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    const now = new Date();
+    const chartDays = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const key = yyyy + "-" + mm + "-" + dd;
+      const dayLabel = DAY_LABELS[d.getDay() === 0 ? 6 : d.getDay() - 1];
+      chartDays.push({ label: dayLabel + " " + d.getDate(), mins: 0, key });
+    }
+    // Slice completed_at to YYYY-MM-DD for reliable matching
+    (attempts[0] || []).forEach(a => {
+      const dateStr = String(a.completed_at).slice(0, 10);
+      const entry = chartDays.find(c => c.key === dateStr);
+      if (entry) entry.mins += Math.round((a.time_taken || 0) / 60);
+    });
+    predictions.studyChart = chartDays.map(({ label, mins }) => ({ label, mins }));
+
     res.json(predictions);
   } catch (err) {
     console.error("[analytics/predict]", err);

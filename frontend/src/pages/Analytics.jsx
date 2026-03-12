@@ -40,7 +40,10 @@ function StudyChart({ data }) {
           <div style={{ flex:1, width:"100%", display:"flex", alignItems:"flex-end" }}>
             <div title={`${d.mins} min`} style={{ width:"100%", height:`${Math.max((d.mins/max)*100, d.mins>0?6:2)}%`, borderRadius:"10px 10px 6px 6px", background:d.mins>0?"linear-gradient(180deg,rgba(58,30,16,0.55),rgba(58,30,16,0.28))":"rgba(58,30,16,0.08)", transition:"height 0.7s cubic-bezier(.34,1.56,.64,1)" }} />
           </div>
-          <span style={{ fontSize:11, fontWeight:800, color:"rgba(58,30,16,0.50)" }}>{d.label}</span>
+          <span style={{ fontSize:10, fontWeight:800, color:"rgba(58,30,16,0.50)", textAlign:"center", lineHeight:1.3, display:"flex", flexDirection:"column", alignItems:"center" }}>
+            <span>{d.label.split(" ")[0]}</span>
+            <span style={{opacity:0.7}}>{d.label.split(" ")[1]}</span>
+          </span>
         </div>
       ))}
     </div>
@@ -120,7 +123,14 @@ export default function AnalyticsPage() {
   const studyRecs=data?.studyRecs??[];
   const trajectory=data?.trajectory??[];
   const subjects=data?.subjectStats??[];
-  const studyChart=useMemo(()=>["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(label=>({label,mins:0})),[data]);
+  const studyChart=useMemo(()=>{
+    if(data?.studyChart) return data.studyChart;
+    const DAY_LABELS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    return Array.from({length:7},(_,i)=>{
+      const d=new Date(Date.now()-(6-i)*86400000);
+      return {label:DAY_LABELS[d.getDay()===0?6:d.getDay()-1]+" "+d.getDate(),mins:0};
+    });
+  },[data]);
 
   return (
     <div className="learnShell">
@@ -190,7 +200,6 @@ export default function AnalyticsPage() {
             <div className="card analyticsPanel">
               <div className="panelHeader"><div><div className="panelLabel">Study time</div><div className="panelTitle">Minutes per day</div></div><div className="panelPill">Last 7 days</div></div>
               {loading?<Sk h={180} r={16}/>:<StudyChart data={studyChart}/>}
-              <div className="panelHint">Aggregated from <code>time_taken</code> on each quiz attempt.</div>
             </div>
             <div className="card analyticsPanel">
               <div className="panelHeader"><div><div className="panelLabel">Quiz</div><div className="panelTitle">Accuracy by subject</div></div><div className="panelPill">Decay-weighted</div></div>
@@ -203,12 +212,10 @@ export default function AnalyticsPage() {
                   </div>
                 ))}
               </div>
-              <div className="panelHint">Exponential decay weighting — half-life 14 days. Formula: w(t) = e^(−λ·days).</div>
             </div>
             <div className="card analyticsPanel">
               <div className="panelHeader"><div><div className="panelLabel">Prediction</div><div className="panelTitle">Score trajectory</div></div><div className="panelPill">Linear regression</div></div>
               {loading?<Sk h={190} r={16}/>:<TrajectoryChart data={trajectory}/>}
-              <div className="panelHint">OLS regression on your attempt history. Dashed = predicted. Diminishing-returns applied above 70%.</div>
             </div>
           </div>
           <div style={{display:"grid",gap:12,alignContent:"start"}}>
@@ -236,7 +243,6 @@ export default function AnalyticsPage() {
                   );
                 })}
               </div>
-              <div className="panelHint">GBM trained on 2,000 synthetic GCSE profiles. Features: weighted score, std dev, attempt count, time-per-question, score trend.</div>
             </div>
             <div className="card analyticsPanel aiCard" style={{animationDelay:"0.1s"}}>
               <div className="panelHeader">
@@ -258,7 +264,6 @@ export default function AnalyticsPage() {
                   </div>
                 ))}
               </div>
-              <div className="panelHint">20 min base + 0.8 min × score gap to 75% target, ordered by priority.</div>
             </div>
           </div>
         </section>
