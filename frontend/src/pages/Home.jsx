@@ -13,9 +13,14 @@ import { getStoredUser } from "../api";
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 // ── tiny fetch helper that always sends x-user-id ─────────────────────────
-async function apiFetch(path, userId) {
+async function apiFetch(path) {
+  const user = getStoredUser();
+  const token = user?.token;
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", "x-user-id": String(userId) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -35,7 +40,7 @@ export default function Home() {
     if (!userId) return;
     async function loadStats() {
       try {
-        const data = await apiFetch(`/api/quiz/history/${userId}`, userId);
+        const data = await apiFetch(`/api/quiz/history/${userId}`);
         const attempts = data?.attempts ?? [];
 
         const now        = Date.now();

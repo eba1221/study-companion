@@ -8,12 +8,13 @@ import mascotImg from "../assets/Quiz.png";
 
 const LETTERS = ["A", "B", "C", "D"];
 
-// ✅ Always reads the logged-in user's real ID
-function getUserId() {
+function getAuthHeaders() {
   try {
-    return JSON.parse(localStorage.getItem("sc_user"))?.id ?? 1;
+    const user = JSON.parse(localStorage.getItem("sc_user"));
+    const token = user?.token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
   } catch {
-    return 1;
+    return {};
   }
 }
 
@@ -22,17 +23,14 @@ export default function QuizPage() {
     document.title = "Quiz | Study Coach";
   }, []);
 
-  // Stage management
-  const [stage, setStage] = useState("setup"); // setup | generating | quiz | results
+  const [stage, setStage] = useState("setup");
 
-  // Setup state
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
   const [tier, setTier] = useState("foundation");
 
-  // Quiz state
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -40,20 +38,17 @@ export default function QuizPage() {
   const [answers, setAnswers] = useState({});
   const [startTime, setStartTime] = useState(null);
 
-  // Results state
   const [results, setResults] = useState(null);
   const [history, setHistory] = useState([]);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Load subjects on mount
   useEffect(() => {
     loadSubjects();
     loadHistory();
   }, []);
 
-  // Load topics when subject changes
   useEffect(() => {
     if (selectedSubject) {
       loadTopics(selectedSubject);
@@ -66,12 +61,13 @@ export default function QuizPage() {
   const loadSubjects = async () => {
     try {
       const res = await fetch("http://localhost:3001/api/subjects", {
-        headers: { "x-user-id": getUserId() },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
       });
       const data = await res.json();
-      setSubjects(data);
+      setSubjects(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to load subjects:", err);
+      setSubjects([]);
     }
   };
 
@@ -79,22 +75,21 @@ export default function QuizPage() {
     try {
       const res = await fetch(
         `http://localhost:3001/api/subjects/${subjectId}/topics`,
-        { headers: { "x-user-id": getUserId() } }
+        { headers: { "Content-Type": "application/json", ...getAuthHeaders() } }
       );
       const data = await res.json();
-      setTopics(data);
+      setTopics(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to load topics:", err);
+      setTopics([]);
     }
   };
 
   const loadHistory = async () => {
     try {
-      const userId = getUserId();
-      const res = await fetch(
-        `http://localhost:3001/api/quiz/history/${userId}`,
-        { headers: { "x-user-id": userId } }
-      );
+      const res = await fetch("http://localhost:3001/api/quiz/history/me", {
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      });
       const data = await res.json();
       setHistory(data.attempts || []);
     } catch (err) {
@@ -115,14 +110,8 @@ export default function QuizPage() {
     try {
       const res = await fetch("http://localhost:3001/api/quiz/generate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": getUserId(),
-        },
-        body: JSON.stringify({
-          topicId: selectedTopic,
-          tier,
-        }),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ topicId: selectedTopic, tier }),
       });
 
       if (!res.ok) {
@@ -144,7 +133,7 @@ export default function QuizPage() {
   const loadQuiz = async (quizId) => {
     try {
       const res = await fetch(`http://localhost:3001/api/quiz/${quizId}`, {
-        headers: { "x-user-id": getUserId() },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
       });
       const data = await res.json();
 
@@ -168,11 +157,7 @@ export default function QuizPage() {
     const questionId = questions[currentIndex].id;
     const userAnswer = LETTERS[selected];
 
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: userAnswer,
-    }));
-
+    setAnswers((prev) => ({ ...prev, [questionId]: userAnswer }));
     setSelected(null);
 
     if (currentIndex + 1 >= questions.length) {
@@ -186,20 +171,11 @@ export default function QuizPage() {
     const timeTaken = Math.round((Date.now() - startTime) / 1000);
 
     try {
-      const res = await fetch(
-        `http://localhost:3001/api/quiz/${quiz.id}/submit`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-user-id": getUserId(),
-          },
-          body: JSON.stringify({
-            answers: finalAnswers,
-            timeTaken,
-          }),
-        }
-      );
+      const res = await fetch(`http://localhost:3001/api/quiz/${quiz.id}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ answers: finalAnswers, timeTaken }),
+      });
 
       const data = await res.json();
       setResults(data);
@@ -227,7 +203,6 @@ export default function QuizPage() {
     ? Math.round(((currentIndex + 1) / questions.length) * 100)
     : 0;
 
-  // Keyboard shortcuts
   useEffect(() => {
     if (stage !== "quiz") return;
 
@@ -248,12 +223,10 @@ export default function QuizPage() {
         e.preventDefault();
         setSelected((s) => (s === null ? 0 : Math.max(s - 1, 0)));
       }
-
       if (k === "enter") {
         e.preventDefault();
         submitAnswer();
       }
-
       if (k === "escape") {
         e.preventDefault();
         resetQuiz();
@@ -266,7 +239,6 @@ export default function QuizPage() {
 
   return (
     <div className="learnShell">
-      {/* Sidebar */}
       <aside className="sidebar">
         <div className="sideLogo">SC</div>
         <Link className="navBtn" to="/" title="Home" aria-label="Home">
@@ -275,15 +247,8 @@ export default function QuizPage() {
         <Link className="navBtn" to="/learn" title="Learn" aria-label="Learn">
           <BookOpen className="navLucide" size={22} />
         </Link>
-        <Link
-          className="navBtn navBtnActive"
-          to="/quiz"
-          title="Quiz"
-          aria-label="Quiz"
-        >
-          <span className="navLucide" style={{ fontWeight: 900 }}>
-            ?
-          </span>
+        <Link className="navBtn navBtnActive" to="/quiz" title="Quiz" aria-label="Quiz">
+          <span className="navLucide" style={{ fontWeight: 900 }}>?</span>
         </Link>
         <div style={{ flex: 1 }} />
         <button className="navBtn" title="Settings" aria-label="Settings">
@@ -294,7 +259,6 @@ export default function QuizPage() {
         </button>
       </aside>
 
-      {/* Main */}
       <main className="main">
         <div className="topbar">
           <div className="search">
@@ -310,7 +274,6 @@ export default function QuizPage() {
         </div>
 
         <section className="quizGrid">
-          {/* Main card */}
           <div className="card quizCardLike">
             <div className="quizHeaderRow">
               <div>
@@ -318,11 +281,7 @@ export default function QuizPage() {
                 <h1 className="quizTitle">Quiz</h1>
               </div>
               <div className="quizMascotHalo">
-                <img
-                  className="quizMascotImg"
-                  src={mascotImg}
-                  alt="Quiz mascot"
-                />
+                <img className="quizMascotImg" src={mascotImg} alt="Quiz mascot" />
               </div>
             </div>
 
@@ -330,8 +289,7 @@ export default function QuizPage() {
             {stage === "setup" && (
               <>
                 <p className="quizSub">
-                  Select a topic and tier. AI will generate 10 GCSE-style
-                  questions from your flashcards.
+                  Select a topic and tier. AI will generate 10 GCSE-style questions from your flashcards.
                 </p>
 
                 <div className="quizSetupGrid">
@@ -344,9 +302,7 @@ export default function QuizPage() {
                     >
                       <option value="">Choose subject...</option>
                       {subjects.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
+                        <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
                   </label>
@@ -361,9 +317,7 @@ export default function QuizPage() {
                     >
                       <option value="">Choose topic...</option>
                       {topics.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
+                        <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
                     </select>
                   </label>
@@ -417,21 +371,11 @@ export default function QuizPage() {
             {/* GENERATING STAGE */}
             {stage === "generating" && (
               <div style={{ textAlign: "center", padding: "40px 20px" }}>
-                <div
-                  style={{
-                    fontSize: "48px",
-                    marginBottom: "16px",
-                    animation: "pulse 1.5s ease-in-out infinite",
-                  }}
-                >
+                <div style={{ fontSize: "48px", marginBottom: "16px", animation: "pulse 1.5s ease-in-out infinite" }}>
                   🤖
                 </div>
-                <h3 style={{ margin: 0, marginBottom: "8px" }}>
-                  AI is generating your quiz...
-                </h3>
-                <p style={{ color: "rgba(58, 30, 16, 0.68)", fontSize: "14px" }}>
-                  This may take 10-20 seconds
-                </p>
+                <h3 style={{ margin: 0, marginBottom: "8px" }}>AI is generating your quiz...</h3>
+                <p style={{ color: "rgba(58, 30, 16, 0.68)", fontSize: "14px" }}>This may take 10-20 seconds</p>
               </div>
             )}
 
@@ -439,24 +383,15 @@ export default function QuizPage() {
             {stage === "quiz" && currentQuestion && (
               <>
                 <div className="quizProgressMeta">
-                  <span>
-                    Question {currentIndex + 1} of {questions.length}
-                  </span>
-                  <span className="quizTopicBadge">
-                    {tier.charAt(0).toUpperCase() + tier.slice(1)} Tier
-                  </span>
+                  <span>Question {currentIndex + 1} of {questions.length}</span>
+                  <span className="quizTopicBadge">{tier.charAt(0).toUpperCase() + tier.slice(1)} Tier</span>
                 </div>
 
                 <div className="quizProgressWrap">
-                  <div
-                    className="quizProgressFill"
-                    style={{ width: `${progressPct}%` }}
-                  />
+                  <div className="quizProgressFill" style={{ width: `${progressPct}%` }} />
                 </div>
 
-                <h2 className="quizQuestion animate-fade">
-                  {currentQuestion.question_text}
-                </h2>
+                <h2 className="quizQuestion animate-fade">{currentQuestion.question_text}</h2>
 
                 <div className="quizChoices">
                   {[
@@ -477,16 +412,10 @@ export default function QuizPage() {
                 </div>
 
                 <div className="quizButtonRow">
-                  <button
-                    className="primaryBtn"
-                    onClick={submitAnswer}
-                    disabled={selected === null}
-                  >
+                  <button className="primaryBtn" onClick={submitAnswer} disabled={selected === null}>
                     Submit answer
                   </button>
-                  <button className="ghostBtn" onClick={resetQuiz}>
-                    Quit
-                  </button>
+                  <button className="ghostBtn" onClick={resetQuiz}>Quit</button>
                 </div>
               </>
             )}
@@ -499,35 +428,20 @@ export default function QuizPage() {
                     <div className="cardLabel">Results</div>
                     <div className="quizScoreLine">
                       <span className="quizScoreBig">{results.score}</span>
-                      <span className="quizScoreSmall">
-                        / {results.totalQuestions} correct
-                      </span>
+                      <span className="quizScoreSmall">/ {results.totalQuestions} correct</span>
                     </div>
-                    <div
-                      style={{
-                        marginTop: "8px",
-                        fontSize: "16px",
-                        fontWeight: 700,
-                        color: "rgba(58, 30, 16, 0.7)",
-                      }}
-                    >
+                    <div style={{ marginTop: "8px", fontSize: "16px", fontWeight: 700, color: "rgba(58, 30, 16, 0.7)" }}>
                       {results.percentage}%
                     </div>
                   </div>
                   <div className="pill">
-                    {results.percentage === 100
-                      ? "Perfect 🎉"
-                      : `${results.totalQuestions - results.score} missed`}
+                    {results.percentage === 100 ? "Perfect 🎉" : `${results.totalQuestions - results.score} missed`}
                   </div>
                 </div>
 
                 <div className="quizButtonRow">
-                  <button className="primaryBtn" onClick={resetQuiz}>
-                    New quiz →
-                  </button>
-                  <button className="ghostBtn" onClick={() => loadQuiz(quiz.id)}>
-                    Retry same quiz
-                  </button>
+                  <button className="primaryBtn" onClick={resetQuiz}>New quiz →</button>
+                  <button className="ghostBtn" onClick={() => loadQuiz(quiz.id)}>Retry same quiz</button>
                 </div>
 
                 <div className="quizReviewSection">
@@ -544,27 +458,20 @@ export default function QuizPage() {
                           return (
                             <div key={idx} className="quizReviewCard">
                               <div className="quizReviewQ">{q.question_text}</div>
-
                               <div className="quizReviewRow">
                                 <span className="quizReviewRowLabel">Your answer</span>
                                 <span className="quizIncorrect">
-                                  {result.userAnswer}:{" "}
-                                  {q[`option_${result.userAnswer.toLowerCase()}`]}
+                                  {result.userAnswer}: {q[`option_${result.userAnswer.toLowerCase()}`]}
                                 </span>
                               </div>
-
                               <div className="quizReviewRow">
                                 <span className="quizReviewRowLabel">Correct</span>
                                 <span className="quizCorrect">
-                                  {result.correctAnswer}:{" "}
-                                  {q[`option_${result.correctAnswer.toLowerCase()}`]}
+                                  {result.correctAnswer}: {q[`option_${result.correctAnswer.toLowerCase()}`]}
                                 </span>
                               </div>
-
                               {result.explanation && (
-                                <div className="quizExplanation">
-                                  {result.explanation}
-                                </div>
+                                <div className="quizExplanation">{result.explanation}</div>
                               )}
                             </div>
                           );
@@ -582,29 +489,18 @@ export default function QuizPage() {
             <div className="quizTipTitle">Quiz History</div>
 
             {history.length === 0 ? (
-              <p className="quizTipText">
-                No quizzes taken yet. Generate your first AI quiz!
-              </p>
+              <p className="quizTipText">No quizzes taken yet. Generate your first AI quiz!</p>
             ) : (
               <div className="quizMiniStats">
                 {history.slice(0, 5).map((attempt) => (
                   <div key={attempt.id} className="quizMiniStat">
                     <div>
                       <div className="quizMiniLabel">{attempt.topic_name}</div>
-                      <div
-                        style={{
-                          fontSize: "11px",
-                          color: "rgba(58, 30, 16, 0.5)",
-                          marginTop: "2px",
-                        }}
-                      >
-                        {attempt.tier} •{" "}
-                        {new Date(attempt.completed_at).toLocaleDateString()}
+                      <div style={{ fontSize: "11px", color: "rgba(58, 30, 16, 0.5)", marginTop: "2px" }}>
+                        {attempt.tier} • {new Date(attempt.completed_at).toLocaleDateString()}
                       </div>
                     </div>
-                    <div className="quizMiniValue">
-                      {attempt.score}/{attempt.total_questions}
-                    </div>
+                    <div className="quizMiniValue">{attempt.score}/{attempt.total_questions}</div>
                   </div>
                 ))}
               </div>

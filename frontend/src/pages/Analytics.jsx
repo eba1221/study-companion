@@ -108,9 +108,9 @@ export default function AnalyticsPage() {
     setLoading(true); setError(null);
     try {
       const user = getStoredUser();
-      const userId = user?.id;
-      if (!userId) { setError("Not logged in."); setLoading(false); return; }
-      const res=await fetch(`${API_BASE}/api/analytics/predict`,{method:"POST",headers:{"Content-Type":"application/json","x-user-id":String(userId)},body:JSON.stringify({user_id:userId})});
+      if (!user?.token) { setError("Not logged in."); setLoading(false); return; }
+      const token = user?.token;
+      const res=await fetch(`${API_BASE}/api/analytics/predict`,{method:"POST",headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify({})}); 
       if(!res.ok) throw new Error(`Server responded with ${res.status}`);
       setData(await res.json());
     } catch(e){ setError(e.message); } finally { setLoading(false); }

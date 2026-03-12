@@ -21,17 +21,18 @@ export function clearStoredUser() {
   localStorage.removeItem(LS_USER_KEY);
 }
 
-function getUserIdForHeader() {
+function getToken() {
   const user = getStoredUser();
-  return String(user?.id ?? "1");
+  return user?.token ?? null;
 }
 
 /* ---------------- Request helpers ---------------- */
 
 function headers(extra = {}) {
+  const token = getToken();
   return {
     "Content-Type": "application/json",
-    "x-user-id": getUserIdForHeader(),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extra,
   };
 }
@@ -91,16 +92,17 @@ export async function dbHealth() {
 
 export async function login(payload) {
   const data = await POST("/api/auth/login", payload);
-  const user = data?.user ?? data;
-  if (user?.id) setStoredUser(user);
+  if (data?.user && data?.token) {
+    setStoredUser({ ...data.user, token: data.token });
+  }
   return data;
 }
 
 export async function register(payload) {
-  // ✅ fixed: was /api/auth/register, must match backend route /api/auth/signup
   const data = await POST("/api/auth/signup", payload);
-  const user = data?.user ?? data;
-  if (user?.id) setStoredUser(user);
+  if (data?.user && data?.token) {
+    setStoredUser({ ...data.user, token: data.token });
+  }
   return data;
 }
 
