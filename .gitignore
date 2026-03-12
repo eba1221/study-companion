@@ -2,3 +2,4 @@
 server/.env
 .env
 server/.env
+node_modules/
