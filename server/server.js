@@ -16,7 +16,7 @@ app.use(
   cors({
     origin: "http://localhost:5173",
     credentials: true,
-    allowedHeaders: ["Content-Type", "x-user-id"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   })
 );
@@ -69,17 +69,19 @@ try {
 
 // ---------------- Middleware ----------------
 function requireUser(req, res, next) {
-  const userId = req.header("x-user-id");
-  if (!userId) return res.status(401).json({ error: "Missing x-user-id" });
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer "))
+    return res.status(401).json({ error: "Missing or invalid token" });
 
-  const n = Number(userId);
-  if (!Number.isInteger(n) || n <= 0) {
-    return res.status(400).json({ error: "Invalid x-user-id" });
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.userId;
+    req.user = { id: decoded.userId };
+    next();
+  } catch {
+    return res.status(401).json({ error: "Invalid or expired token" });
   }
-
-  req.userId = n;
-  req.user = { id: n };
-  next();
 }
 
 // ---------------- Auth ----------------
@@ -537,6 +539,28 @@ app.post("/api/quiz/:quizId/submit", requireUser, async (req, res) => {
   }
 });
 
+// /api/quiz/history/me — uses JWT user, no hardcoded ID needed
+app.get("/api/quiz/history/me", requireUser, async (req, res) => {
+  try {
+    const [attempts] = await pool.query(
+      `SELECT qa.id, qa.score, qa.total_questions, qa.time_taken, qa.completed_at,
+              q.title, q.tier, t.name as topic_name, s.name as subject_name
+       FROM quiz_attempts qa
+       JOIN quizzes q ON qa.quiz_id = q.id
+       JOIN topics t ON q.topic_id = t.id
+       JOIN subjects s ON t.subject_id = s.id
+       WHERE qa.user_id = ?
+       ORDER BY qa.completed_at DESC LIMIT 50`,
+      [req.userId]
+    );
+    res.json({ attempts });
+  } catch (error) {
+    console.error("Get history/me error:", error);
+    res.status(500).json({ error: "Failed to fetch quiz history" });
+  }
+});
+
+// Keep old route for backwards compatibility
 app.get("/api/quiz/history/:userId", requireUser, async (req, res) => {
   try {
     const [attempts] = await pool.query(
@@ -597,7 +621,6 @@ app.post("/api/analytics/predict", requireUser, async (req, res) => {
 
     const predictions = await mlRes.json();
 
-    // Compute daily study minutes — match by YYYY-MM-DD string
     const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
     const now = new Date();
     const chartDays = [];
@@ -612,7 +635,6 @@ app.post("/api/analytics/predict", requireUser, async (req, res) => {
       const dayLabel = DAY_LABELS[d.getDay() === 0 ? 6 : d.getDay() - 1];
       chartDays.push({ label: dayLabel + " " + d.getDate(), mins: 0, key });
     }
-    // Slice completed_at to YYYY-MM-DD for reliable matching
     (attempts[0] || []).forEach(a => {
       const dateStr = String(a.completed_at).slice(0, 10);
       const entry = chartDays.find(c => c.key === dateStr);
