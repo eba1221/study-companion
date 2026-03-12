@@ -1,6 +1,18 @@
+# Dependencies
+node_modules/
+.venv/
+
+# Environment files
 .env
 server/.env
-.env
-server/.env
-node_modules/
-node_modules/
+
+# Mac junk
+.DS_Store
+
+# Build output
+frontend/dist/
+dist/
+
+# Python
+__pycache__/
+*.pyc
