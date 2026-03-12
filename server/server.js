@@ -669,3 +669,138 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+
+// ================================================================================
+// SPACED REPETITION (SM-2 Algorithm)
+// ================================================================================
+
+// Get all cards due for review today
+app.get("/api/review/due", requireUser, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT c.id, c.front, c.back, d.name as deck_name,
+              COALESCE(cr.easiness, 2.5) as easiness,
+              COALESCE(cr.interval_days, 1) as interval_days,
+              COALESCE(cr.repetitions, 0) as repetitions,
+              COALESCE(cr.next_review, CURDATE()) as next_review
+       FROM cards c
+       JOIN decks d ON c.deck_id = d.id
+       LEFT JOIN card_reviews cr ON cr.card_id = c.id AND cr.user_id = ?
+       WHERE cr.next_review <= CURDATE() OR cr.next_review IS NULL
+       ORDER BY cr.next_review ASC
+       LIMIT 20`,
+      [req.userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Submit a review for a card (quality 0-5)
+app.post("/api/review/:cardId", requireUser, async (req, res) => {
+  const { quality } = req.body;
+
+  if (quality === undefined || quality < 0 || quality > 5)
+    return res.status(400).json({ error: "Quality must be 0-5" });
+
+  try {
+    // Get existing review record for this user+card
+    const [rows] = await pool.query(
+      `SELECT * FROM card_reviews WHERE card_id = ? AND user_id = ?`,
+      [req.params.cardId, req.userId]
+    );
+
+    let easiness = 2.5;
+    let interval_days = 1;
+    let repetitions = 0;
+
+    if (rows.length) {
+      easiness = rows[0].easiness;
+      interval_days = rows[0].interval_days;
+      repetitions = rows[0].repetitions;
+    }
+
+    // SM-2 Algorithm
+    if (quality < 3) {
+      repetitions = 0;
+      interval_days = 1;
+    } else {
+      if (repetitions === 0) interval_days = 1;
+      else if (repetitions === 1) interval_days = 6;
+      else interval_days = Math.round(interval_days * easiness);
+      repetitions += 1;
+    }
+
+    // Update easiness factor
+    easiness = easiness + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+    if (easiness < 1.3) easiness = 1.3;
+
+    // Calculate next review date
+    const nextReview = new Date();
+    nextReview.setDate(nextReview.getDate() + interval_days);
+    const nextReviewStr = nextReview.toISOString().split("T")[0];
+
+    // Upsert into card_reviews
+    await pool.query(
+      `INSERT INTO card_reviews (user_id, card_id, easiness, interval_days, repetitions, next_review)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         easiness = VALUES(easiness),
+         interval_days = VALUES(interval_days),
+         repetitions = VALUES(repetitions),
+         next_review = VALUES(next_review)`,
+      [req.userId, req.params.cardId, easiness, interval_days, repetitions, nextReviewStr]
+    );
+
+    res.json({ easiness, interval_days, repetitions, next_review: nextReviewStr });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get review stats for a user
+app.get("/api/review/stats", requireUser, async (req, res) => {
+  try {
+    const [due] = await pool.query(
+      `SELECT COUNT(*) as count FROM card_reviews
+       WHERE user_id = ? AND next_review <= CURDATE()`,
+      [req.userId]
+    );
+    const [total] = await pool.query(
+      `SELECT COUNT(*) as count FROM card_reviews WHERE user_id = ?`,
+      [req.userId]
+    );
+    const [upcoming] = await pool.query(
+      `SELECT DATE(next_review) as date, COUNT(*) as count
+       FROM card_reviews
+       WHERE user_id = ? AND next_review > CURDATE()
+       GROUP BY DATE(next_review) ORDER BY date ASC LIMIT 7`,
+      [req.userId]
+    );
+    res.json({ due: due[0].count, total: total[0].count, upcoming });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a card to review queue (called from study mode)
+app.post("/api/review/add/:cardId", requireUser, async (req, res) => {
+  const { known } = req.body; // true = knew it, false = didn't know
+  try {
+    const nextReview = new Date();
+    if (known) nextReview.setDate(nextReview.getDate() + 1); // knew it = review tomorrow
+    // didn't know = review today
+
+    await pool.query(
+      `INSERT INTO card_reviews (user_id, card_id, next_review)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         next_review = LEAST(next_review, VALUES(next_review))`,
+      [req.userId, req.params.cardId, nextReview.toISOString().split("T")[0]]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});

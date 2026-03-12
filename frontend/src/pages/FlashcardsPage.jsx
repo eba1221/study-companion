@@ -5,10 +5,22 @@ import "./FlashcardsPage.css";
 
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { Home as HomeIcon, BookOpen, Settings, User, Check, X, Search } from "lucide-react";
+import { Home as HomeIcon, BookOpen, Settings, User, Check, X, Search, Brain } from "lucide-react";
 
 import booksMascot from "../assets/Books.png";
-import { getDecks, getCards, getSubjects, getTopicsBySubject } from "../api";
+import { getDecks, getCards, getSubjects, getTopicsBySubject, getStoredUser } from "../api";
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+function getAuthHeaders() {
+  try {
+    const user = getStoredUser();
+    const token = user?.token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
 
 export default function FlashcardsPage() {
   const [decks, setDecks] = useState([]);
@@ -20,20 +32,27 @@ export default function FlashcardsPage() {
   const [activeSubjectId, setActiveSubjectId] = useState("ALL");
   const [activeTopicId, setActiveTopicId] = useState("ALL");
 
-  const [mode, setMode] = useState("manage");
+  const [mode, setMode] = useState("manage"); // manage | study | review
   const [query, setQuery] = useState("");
 
+  // Study mode state
   const [studyQueue, setStudyQueue] = useState([]);
   const [studyIndex, setStudyIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-
   const [pileKnown, setPileKnown] = useState([]);
   const [pileUnknown, setPileUnknown] = useState([]);
+
+  // Review (SM-2) state
+  const [reviewQueue, setReviewQueue] = useState([]);
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const [reviewFlipped, setReviewFlipped] = useState(false);
+  const [reviewStats, setReviewStats] = useState(null); // { due, total, upcoming }
+  const [reviewResults, setReviewResults] = useState([]); // { cardId, quality }
 
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Load decks + subjects on mount
+  // Load decks + subjects + review stats on mount
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -57,6 +76,22 @@ export default function FlashcardsPage() {
     })();
     return () => { alive = false; };
   }, []);
+
+  // Load review stats
+  useEffect(() => {
+    loadReviewStats();
+  }, []);
+
+  async function loadReviewStats() {
+    try {
+      const res = await fetch(`${API_BASE}/api/review/stats`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      });
+      if (res.ok) setReviewStats(await res.json());
+    } catch (e) {
+      console.error("Failed to load review stats:", e);
+    }
+  }
 
   // Load topics when subject changes
   useEffect(() => {
@@ -133,6 +168,7 @@ export default function FlashcardsPage() {
     );
   }, [cards, query]);
 
+  // ── Study mode ──────────────────────────────────────────────────────────
   const resetSessionState = () => {
     setStudyQueue([]);
     setStudyIndex(0);
@@ -160,14 +196,25 @@ export default function FlashcardsPage() {
 
   const flipCard = () => setIsFlipped((v) => !v);
 
-  const pushToPile = (which) => {
-    if (!currentCard) return;
-    const id = currentCard.id;
-    if (which === "known") setPileKnown((p) => [...p, id]);
-    if (which === "unknown") setPileUnknown((p) => [...p, id]);
-    setIsFlipped(false);
-    setStudyIndex((i) => Math.min(i + 1, studyQueue.length));
-  };
+  const pushToPile = async (which) => {
+  if (!currentCard) return;
+  const id = currentCard.id;
+  if (which === "known") setPileKnown((p) => [...p, id]);
+  if (which === "unknown") setPileUnknown((p) => [...p, id]);
+  setIsFlipped(false);
+  setStudyIndex((i) => Math.min(i + 1, studyQueue.length));
+
+  // Add to spaced repetition queue
+  try {
+    await fetch(`${API_BASE}/api/review/add/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ known: which === "known" }),
+    });
+  } catch (e) {
+    console.error("Failed to add to review queue:", e);
+  }
+};
 
   const exitStudy = () => { setMode("manage"); resetSessionState(); };
 
@@ -179,6 +226,72 @@ export default function FlashcardsPage() {
     const set = new Set(pileUnknown);
     return cards.filter((c) => set.has(c.id));
   }, [cards, pileUnknown]);
+
+  // ── Review (SM-2) mode ───────────────────────────────────────────────────
+  async function startReview() {
+    try {
+      setBusy(true);
+      const res = await fetch(`${API_BASE}/api/review/due`, {
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      });
+      const due = await res.json();
+      if (!Array.isArray(due) || due.length === 0) {
+        setErrorMsg("No cards due for review today! Come back later.");
+        return;
+      }
+      setReviewQueue(due);
+      setReviewIndex(0);
+      setReviewFlipped(false);
+      setReviewResults([]);
+      setMode("review");
+    } catch (e) {
+      setErrorMsg("Failed to load review cards");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitReview(quality) {
+    const card = reviewQueue[reviewIndex];
+    if (!card) return;
+
+    try {
+      await fetch(`${API_BASE}/api/review/${card.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ quality }),
+      });
+      setReviewResults((r) => [...r, { cardId: card.id, quality }]);
+    } catch (e) {
+      console.error("Failed to submit review:", e);
+    }
+
+    setReviewFlipped(false);
+    setReviewIndex((i) => i + 1);
+  }
+
+  function exitReview() {
+    setMode("manage");
+    setReviewQueue([]);
+    setReviewIndex(0);
+    setReviewFlipped(false);
+    setReviewResults([]);
+    loadReviewStats();
+  }
+
+  const reviewCard = reviewQueue[reviewIndex] || null;
+  const reviewDone = mode === "review" && reviewIndex >= reviewQueue.length;
+  const reviewProgressPct = reviewQueue.length
+    ? Math.round((reviewIndex / reviewQueue.length) * 100)
+    : 0;
+
+  // Quality label helpers
+  const QUALITY_BUTTONS = [
+    { quality: 0, label: "Again",  hint: "Complete blackout",     color: "#dc2626" },
+    { quality: 3, label: "Hard",   hint: "Correct but difficult", color: "#d97706" },
+    { quality: 4, label: "Good",   hint: "Correct with effort",   color: "#16a34a" },
+    { quality: 5, label: "Easy",   hint: "Perfect recall",        color: "#0284c7" },
+  ];
 
   return (
     <div className="learnShell">
@@ -252,6 +365,20 @@ export default function FlashcardsPage() {
             >
               Study
             </button>
+            <button
+              className={`pill ${mode === "review" ? "pillActive" : ""}`}
+              onClick={startReview}
+              disabled={busy}
+              style={{
+                opacity: busy ? 0.6 : 1,
+                background: reviewStats?.due > 0 ? "rgba(220,38,38,0.12)" : undefined,
+                color: reviewStats?.due > 0 ? "#dc2626" : undefined,
+                fontWeight: reviewStats?.due > 0 ? 900 : undefined,
+              }}
+            >
+              <Brain size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />
+              Review {reviewStats?.due > 0 ? `(${reviewStats.due})` : ""}
+            </button>
             <div className="pill" style={{ cursor: "default" }}>
               {deckCount} Deck{deckCount !== 1 ? "s" : ""}
             </div>
@@ -271,6 +398,32 @@ export default function FlashcardsPage() {
               <div className="cardTitle">Decks</div>
               <div className="chip">{deckCount}</div>
             </div>
+
+            {/* Review stats panel */}
+            {reviewStats && (
+              <div style={{
+                margin: "8px 0 12px",
+                padding: "10px 12px",
+                borderRadius: 12,
+                background: reviewStats.due > 0 ? "rgba(220,38,38,0.07)" : "rgba(58,30,16,0.04)",
+                border: reviewStats.due > 0 ? "1px solid rgba(220,38,38,0.20)" : "1px solid rgba(58,30,16,0.08)",
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: "rgba(58,30,16,0.5)", marginBottom: 4 }}>
+                  SPACED REPETITION
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: reviewStats.due > 0 ? "#dc2626" : "#16a34a" }}>
+                  {reviewStats.due > 0 ? `${reviewStats.due} cards due today` : "All caught up! ✓"}
+                </div>
+                <div style={{ fontSize: 11, color: "rgba(58,30,16,0.5)", marginTop: 2 }}>
+                  {reviewStats.total} total cards tracked
+                </div>
+                {reviewStats.upcoming?.length > 0 && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: "rgba(58,30,16,0.5)" }}>
+                    Next: {reviewStats.upcoming[0].count} cards on {new Date(reviewStats.upcoming[0].date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {filteredDecks.length === 0 ? (
               <div className="fcEmpty" style={{ marginTop: 12 }}>
@@ -295,14 +448,131 @@ export default function FlashcardsPage() {
 
           {/* Right: Main */}
           <div className="card fcMain">
-            {!activeDeck ? (
+            {!activeDeck && mode !== "review" ? (
               <div className="fcEmpty">
                 <div className="cardTitle">No deck selected</div>
                 <div className="planMeta">Pick a deck from the left.</div>
               </div>
-            ) : mode === "study" ? (
+
+            ) : mode === "review" ? (
+              /* ── REVIEW MODE ── */
               <div className="fcStudyWrap">
-                {/* Header */}
+                <div className="cardHeaderRow">
+                  <div>
+                    <div className="cardTitle">Spaced Repetition Review</div>
+                    <div className="planMeta">SM-2 Algorithm · {reviewQueue.length} cards due</div>
+                  </div>
+                  <button className="fcBtn fcBtnGhost" onClick={exitReview}>Exit</button>
+                </div>
+
+                <div className="fcProgressTrack">
+                  <div className="fcProgressFill" style={{ width: `${reviewProgressPct}%` }} />
+                </div>
+
+                {reviewDone ? (
+                  /* Review complete screen */
+                  <div className="fcDone">
+                    <div style={{ fontSize: 40, marginBottom: 8 }}>🧠</div>
+                    <div className="continueTitle">Review complete!</div>
+                    <div className="continueMeta" style={{ marginBottom: 16 }}>
+                      You reviewed {reviewResults.length} cards
+                    </div>
+
+                    {/* Score breakdown */}
+                    <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 20, flexWrap: "wrap" }}>
+                      {[
+                        { label: "Again", quality: 0, color: "#dc2626" },
+                        { label: "Hard",  quality: 3, color: "#d97706" },
+                        { label: "Good",  quality: 4, color: "#16a34a" },
+                        { label: "Easy",  quality: 5, color: "#0284c7" },
+                      ].map(({ label, quality, color }) => {
+                        const count = reviewResults.filter((r) => r.quality === quality).length;
+                        return (
+                          <div key={label} style={{
+                            padding: "8px 16px", borderRadius: 12,
+                            background: `${color}15`, border: `1px solid ${color}40`,
+                            textAlign: "center",
+                          }}>
+                            <div style={{ fontSize: 20, fontWeight: 900, color }}>{count}</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(58,30,16,0.6)" }}>{label}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="fcRow" style={{ justifyContent: "center" }}>
+                      <button className="fcBtn fcBtnAccent" onClick={exitReview}>Back to browse</button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Review card */
+                  <div className="fcStudyStage">
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(58,30,16,0.45)", textAlign: "center", marginBottom: 8 }}>
+                      {reviewIndex + 1} / {reviewQueue.length} · {reviewCard?.deck_name}
+                    </div>
+
+                    <div
+                      className="fcStudyCard"
+                      onClick={() => setReviewFlipped((v) => !v)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setReviewFlipped((v) => !v); }
+                      }}
+                    >
+                      <img src={booksMascot} className="fcMascotOnCard" alt="" draggable="false" />
+                      <div className={`fcStudyInner ${reviewFlipped ? "isFlipped" : ""}`}>
+                        <div className="fcStudyFace fcStudyFront">
+                          <div className="fcStudyHint">Question · click to reveal answer</div>
+                          <div className="fcStudyText">{reviewCard?.front}</div>
+                        </div>
+                        <div className="fcStudyFace fcStudyBack">
+                          <div className="fcStudyHint">Answer · rate how well you knew this</div>
+                          <div className="fcStudyText">{reviewCard?.back}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rating buttons — only show after flipping */}
+                    {reviewFlipped ? (
+                      <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginTop: 16 }}>
+                        {QUALITY_BUTTONS.map(({ quality, label, hint, color }) => (
+                          <button
+                            key={quality}
+                            onClick={() => submitReview(quality)}
+                            style={{
+                              padding: "10px 20px",
+                              borderRadius: 12,
+                              border: `1.5px solid ${color}50`,
+                              background: `${color}12`,
+                              color,
+                              fontWeight: 900,
+                              fontSize: 13,
+                              cursor: "pointer",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: 2,
+                              minWidth: 70,
+                            }}
+                          >
+                            <span>{label}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, opacity: 0.7 }}>{hint}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: "center", marginTop: 16, color: "rgba(58,30,16,0.45)", fontSize: 13, fontWeight: 700 }}>
+                        Click the card to reveal the answer
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+            ) : mode === "study" ? (
+              /* ── STUDY MODE (unchanged) ── */
+              <div className="fcStudyWrap">
                 <div className="cardHeaderRow">
                   <div>
                     <div className="cardTitle">Study mode</div>
@@ -319,7 +589,6 @@ export default function FlashcardsPage() {
                   </div>
                 </div>
 
-                {/* Progress */}
                 <div className="fcProgressTrack">
                   <div className="fcProgressFill" style={{ width: `${progressPct}%` }} />
                 </div>
@@ -347,7 +616,6 @@ export default function FlashcardsPage() {
                   </div>
                 ) : (
                   <div className="fcStudyStage">
-                    {/* Flip card */}
                     <div
                       className="fcStudyCard"
                       onClick={flipCard}
@@ -360,7 +628,6 @@ export default function FlashcardsPage() {
                       }}
                     >
                       <img src={booksMascot} className="fcMascotOnCard" alt="" draggable="false" />
-
                       <div className={`fcStudyInner ${isFlipped ? "isFlipped" : ""}`}>
                         <div className="fcStudyFace fcStudyFront">
                           <div className="fcStudyHint">Question · click to reveal</div>
@@ -373,7 +640,6 @@ export default function FlashcardsPage() {
                       </div>
                     </div>
 
-                    {/* Sort controls */}
                     <div className="fcSortRow">
                       <button className="fcBtn fcBtnGhost" onClick={() => pushToPile("unknown")} title="Shortcut: 1">
                         <X size={14} /> I don't know this
@@ -383,7 +649,6 @@ export default function FlashcardsPage() {
                       </button>
                     </div>
 
-                    {/* Counter */}
                     <div className="fcStudyCounter">
                       <span>{Math.min(studyIndex + 1, studyQueue.length)} / {studyQueue.length}</span>
                       <span className="planMeta" style={{ fontWeight: 800 }}>
@@ -393,7 +658,9 @@ export default function FlashcardsPage() {
                   </div>
                 )}
               </div>
+
             ) : (
+              /* ── MANAGE MODE (unchanged) ── */
               <div>
                 <div className="cardHeaderRow">
                   <div>
