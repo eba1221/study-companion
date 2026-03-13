@@ -1,6 +1,6 @@
 // frontend/src/api.js
 
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const BASE = "https://study-companion-production-cec1.up.railway.app";
 const LS_USER_KEY = "sc_user";
 
 /* ---------------- Auth (local storage) ---------------- */
