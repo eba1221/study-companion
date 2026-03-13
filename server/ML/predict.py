@@ -1,3 +1,4 @@
+import os
 """
 predict.py
 ==========
@@ -317,5 +318,6 @@ def health():
 
 
 if __name__ == "__main__":
-    print("🚀 ML prediction server running on http://localhost:5001")
-    app.run(port=5001, debug=False)
+    port = int(os.environ.get("PORT", 5001))
+    print(f"🚀 ML prediction server running on port {port}")
+    app.run(host="0.0.0.0", port=port, debug=False)
