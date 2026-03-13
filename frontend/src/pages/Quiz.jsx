@@ -60,7 +60,7 @@ export default function QuizPage() {
 
   const loadSubjects = async () => {
     try {
-      const res = await fetch("http://localhost:3001/api/subjects", {
+      const res = await fetch("https://study-companion-production-cec1.up.railway.app/api/subjects", {
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
       });
       const data = await res.json();
@@ -74,7 +74,7 @@ export default function QuizPage() {
   const loadTopics = async (subjectId) => {
     try {
       const res = await fetch(
-        `http://localhost:3001/api/subjects/${subjectId}/topics`,
+        `https://study-companion-production-cec1.up.railway.app/api/subjects/${subjectId}/topics`,
         { headers: { "Content-Type": "application/json", ...getAuthHeaders() } }
       );
       const data = await res.json();
@@ -87,7 +87,7 @@ export default function QuizPage() {
 
   const loadHistory = async () => {
     try {
-      const res = await fetch("http://localhost:3001/api/quiz/history/me", {
+      const res = await fetch("https://study-companion-production-cec1.up.railway.app/api/quiz/history/me", {
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
       });
       const data = await res.json();
@@ -108,7 +108,7 @@ export default function QuizPage() {
     setStage("generating");
 
     try {
-      const res = await fetch("http://localhost:3001/api/quiz/generate", {
+      const res = await fetch("https://study-companion-production-cec1.up.railway.app/api/quiz/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ topicId: selectedTopic, tier }),
@@ -132,7 +132,7 @@ export default function QuizPage() {
 
   const loadQuiz = async (quizId) => {
     try {
-      const res = await fetch(`http://localhost:3001/api/quiz/${quizId}`, {
+      const res = await fetch(`https://study-companion-production-cec1.up.railway.app/api/quiz/${quizId}`, {
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
       });
       const data = await res.json();
@@ -171,7 +171,7 @@ export default function QuizPage() {
     const timeTaken = Math.round((Date.now() - startTime) / 1000);
 
     try {
-      const res = await fetch(`http://localhost:3001/api/quiz/${quiz.id}/submit`, {
+      const res = await fetch(`https://study-companion-production-cec1.up.railway.app/api/quiz/${quiz.id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ answers: finalAnswers, timeTaken }),

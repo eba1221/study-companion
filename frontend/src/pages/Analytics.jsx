@@ -10,7 +10,7 @@ import {
 import diagramsMascot from "../assets/Diagrams.png";
 import { getStoredUser } from "../api";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE = "https://study-companion-production-cec1.up.railway.app";
 
 const SUBJECT_COLORS = {
   Biology:   { fill: "rgba(134,197,143,0.85)", border: "rgba(72,160,84,0.5)",   text: "#2d6e38" },

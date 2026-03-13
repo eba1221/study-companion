@@ -10,7 +10,7 @@ import WaveGif      from "../assets/Wave.GIF";
 import { Home as HomeIcon, Settings, LogOut } from "lucide-react";
 import { getStoredUser } from "../api";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE = "https://study-companion-production-cec1.up.railway.app";
 
 // ── tiny fetch helper that always sends x-user-id ─────────────────────────
 async function apiFetch(path) {

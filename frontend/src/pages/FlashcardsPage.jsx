@@ -10,7 +10,7 @@ import { Home as HomeIcon, BookOpen, Settings, User, Check, X, Search, Brain } f
 import booksMascot from "../assets/Books.png";
 import { getDecks, getCards, getSubjects, getTopicsBySubject, getStoredUser } from "../api";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE = "https://study-companion-production-cec1.up.railway.app";
 
 function getAuthHeaders() {
   try {
