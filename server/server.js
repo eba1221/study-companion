@@ -586,7 +586,7 @@ app.get("/api/quiz/history/:userId", requireUser, async (req, res) => {
 // ANALYTICS — ML PREDICTIONS (proxies to Flask ML server on port 5001)
 // ================================================================================
 
-const ML_SERVER = process.env.ML_SERVER_URL || "http://localhost:5001";
+const ML_SERVER = process.env.ML_SERVER_URL || "https://ml-production-7ceb.up.railway.app";
 
 app.post("/api/analytics/predict", requireUser, async (req, res) => {
   try {
