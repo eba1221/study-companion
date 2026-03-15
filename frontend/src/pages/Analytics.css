@@ -86,9 +86,24 @@
 
 .aPanel {
   padding: 20px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
+  height: 420px;
 }
+
+.aPanelScroll {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding-right: 4px;
+}
+
+.aPanelScroll::-webkit-scrollbar { width: 4px; }
+.aPanelScroll::-webkit-scrollbar-track { background: transparent; }
+.aPanelScroll::-webkit-scrollbar-thumb { background: rgba(58,30,16,0.18); border-radius: 999px; }
 
 .aPanelHeader {
   display: flex;
@@ -100,4 +115,14 @@
 @media (max-width: 900px) {
   .aKpis { grid-template-columns: repeat(2, 1fr); }
   .aGrid  { grid-template-columns: 1fr; }
+}
+.aGraphs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .aGraphs { grid-template-columns: 1fr; }
 }
