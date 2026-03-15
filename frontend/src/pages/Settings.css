@@ -1,0 +1,254 @@
+/* ── Settings page layout ──────────────────────────────────────────────── */
+
+.settingsMain {
+  flex: 1;
+  padding: 40px 48px;
+  overflow-y: auto;
+  max-width: 720px;
+}
+
+.settingsHeader {
+  margin-bottom: 36px;
+}
+
+.settingsTitle {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text, #111);
+  margin: 0 0 6px;
+}
+
+.settingsSub {
+  font-size: 0.9rem;
+  color: var(--text-muted, #6b7280);
+  margin: 0;
+}
+
+/* ── Section cards ─────────────────────────────────────────────────────── */
+
+.settingsSections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settingsCard {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 28px 32px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.settingsCardHeader {
+  margin-bottom: 24px;
+}
+
+.settingsCardTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 4px;
+}
+
+.settingsCardDesc {
+  font-size: 0.825rem;
+  color: #6b7280;
+}
+
+/* ── Avatar row ────────────────────────────────────────────────────────── */
+
+.avatarRow {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+
+.avatarMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.avatarName {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111;
+}
+
+.avatarEmail {
+  font-size: 0.825rem;
+  color: #6b7280;
+}
+
+.avatarBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.avatarBtn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+/* ── Form fields ───────────────────────────────────────────────────────── */
+
+.settingsForm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.fieldInput {
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #111;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.fieldInput:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.fieldInputDisabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.fieldInputError {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.fieldHint {
+  font-size: 0.775rem;
+  color: #9ca3af;
+}
+
+/* ── Password strength ─────────────────────────────────────────────────── */
+
+.strengthWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.strengthBar {
+  flex: 1;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.strengthFill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.strengthFill[data-strength="weak"]   { width: 33%; background: #ef4444; }
+.strengthFill[data-strength="medium"] { width: 66%; background: #f59e0b; }
+.strengthFill[data-strength="strong"] { width: 100%; background: #16a34a; }
+
+.strengthLabel {
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 48px;
+}
+
+/* ── Form footer ───────────────────────────────────────────────────────── */
+
+.formFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding-top: 6px;
+}
+
+.statusMsg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.825rem;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease;
+}
+
+.statusOk  { color: #16a34a; }
+.statusErr { color: #dc2626; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.saveBtn {
+  padding: 9px 22px;
+  border-radius: 10px;
+  border: none;
+  background: #6366f1;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.saveBtn:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.saveBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

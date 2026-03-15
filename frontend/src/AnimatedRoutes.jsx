@@ -7,6 +7,7 @@ import Analytics from "./pages/Analytics";
 import FlashcardsPage from "./pages/FlashcardsPage";
 import Auth from "./pages/Auth";
 import ProtectedRoute from "./components/ProtectedRoute";
+import SettingsPage from "./pages/Settings";
 
 const pageVariants = {
   initial: { opacity: 0, y: 6, filter: "blur(2px)" },
@@ -63,6 +64,10 @@ export default function AnimatedRoutes() {
 
         <Route path="/analytics" element={
           <ProtectedRoute><Page><Analytics /></Page></ProtectedRoute>
+        } />
+
+        <Route path="/settings" element={
+          <ProtectedRoute><Page><SettingsPage /></Page></ProtectedRoute>
         } />
 
         {/* Redirects */}
