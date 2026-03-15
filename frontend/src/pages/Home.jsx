@@ -151,9 +151,9 @@ export default function Home() {
           <HomeIcon className="navLucide" size={22} />
         </Link>
         <div style={{ flex: 1 }} />
-        <button className="navBtn" title="Settings" aria-label="Settings">
+        <Link className="navBtn" to="/settings" title="Settings" aria-label="Settings">
           <Settings className="navLucide" size={22} />
-        </button>
+        </Link>
         <button className="navBtn" title="Logout" aria-label="Logout" onClick={handleLogout}>
           <LogOut className="navLucide" size={22} />
         </button>
@@ -161,20 +161,6 @@ export default function Home() {
 
       {/* Main */}
       <main className="main">
-        {/* Topbar */}
-        <div className="topbar">
-          <div className="search">
-            🔎
-            <input placeholder="Search topics, quizzes, flashcards..." />
-          </div>
-          <div className="pills">
-            <div className="pill">Today</div>
-            {!statsLoading && stats?.streak > 0 && (
-              <div className="pill">Streak 🔥 {stats.streak}</div>
-            )}
-          </div>
-        </div>
-
         {/* Hero */}
         <section className="hero">
           <div className="heroCopy">
