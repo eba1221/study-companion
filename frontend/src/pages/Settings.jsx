@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Home as HomeIcon, Settings, LogOut, Check, X } from "lucide-react";
 import { getStoredUser } from "../api";
+import teachingImg from "../assets/Teaching.png";
 
 const API_BASE = "https://study-companion-production-cec1.up.railway.app";
 
@@ -21,22 +22,19 @@ async function apiFetch(path, options = {}) {
 }
 
 export default function SettingsPage() {
-  const navigate    = useNavigate();
-  const user        = getStoredUser();
-  const userId      = user?.id;
+  const navigate = useNavigate();
+  const user     = getStoredUser();
+  const userId   = user?.id;
 
-  // ── profile state ───────────────────────────────────────────────────────
-  const [displayName, setDisplayName] = useState(user?.display_name || "");
-  const [email]                        = useState(user?.email || "");
-  const [profileStatus, setProfileStatus] = useState(null); // "saving" | "saved" | "error"
+  const [displayName, setDisplayName]     = useState(user?.display_name || "");
+  const [email]                           = useState(user?.email || "");
+  const [profileStatus, setProfileStatus] = useState(null);
 
-  // ── password state ──────────────────────────────────────────────────────
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword,     setNewPassword]     = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordStatus,  setPasswordStatus]  = useState(null); // "saving" | "saved" | "error" | "mismatch"
+  const [passwordStatus,  setPasswordStatus]  = useState(null);
 
-  // ── avatar ──────────────────────────────────────────────────────────────
   const initials = (displayName || email || "?")
     .split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -45,7 +43,6 @@ export default function SettingsPage() {
     navigate("/auth");
   }
 
-  // ── save profile ────────────────────────────────────────────────────────
   async function saveProfile(e) {
     e.preventDefault();
     if (!displayName.trim()) return;
@@ -55,9 +52,7 @@ export default function SettingsPage() {
         method: "PATCH",
         body: JSON.stringify({ display_name: displayName.trim() }),
       });
-      // Update local storage
-      const updated = { ...user, display_name: displayName.trim() };
-      localStorage.setItem("sc_user", JSON.stringify(updated));
+      localStorage.setItem("sc_user", JSON.stringify({ ...user, display_name: displayName.trim() }));
       setProfileStatus("saved");
       setTimeout(() => setProfileStatus(null), 3000);
     } catch {
@@ -66,19 +61,10 @@ export default function SettingsPage() {
     }
   }
 
-  // ── change password ─────────────────────────────────────────────────────
   async function changePassword(e) {
     e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      setPasswordStatus("mismatch");
-      setTimeout(() => setPasswordStatus(null), 3000);
-      return;
-    }
-    if (newPassword.length < 8) {
-      setPasswordStatus("tooshort");
-      setTimeout(() => setPasswordStatus(null), 3000);
-      return;
-    }
+    if (newPassword !== confirmPassword) { setPasswordStatus("mismatch"); setTimeout(() => setPasswordStatus(null), 3000); return; }
+    if (newPassword.length < 8)          { setPasswordStatus("tooshort"); setTimeout(() => setPasswordStatus(null), 3000); return; }
     setPasswordStatus("saving");
     try {
       await apiFetch(`/api/users/${userId}/password`, {
@@ -86,9 +72,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
       });
       setPasswordStatus("saved");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
       setTimeout(() => setPasswordStatus(null), 3000);
     } catch {
       setPasswordStatus("error");
@@ -97,10 +81,10 @@ export default function SettingsPage() {
   }
 
   const passwordMsg = {
-    mismatch: { text: "Passwords don't match.",        ok: false },
+    mismatch: { text: "Passwords don't match.",          ok: false },
     tooshort: { text: "Password must be 8+ characters.", ok: false },
-    error:    { text: "Incorrect current password.",   ok: false },
-    saved:    { text: "Password updated!",             ok: true  },
+    error:    { text: "Incorrect current password.",     ok: false },
+    saved:    { text: "Password updated!",               ok: true  },
   }[passwordStatus];
 
   const profileMsg = {
@@ -108,165 +92,106 @@ export default function SettingsPage() {
     saved: { text: "Profile saved!",             ok: true  },
   }[profileStatus];
 
+  const strength = newPassword.length >= 12 && /[^a-zA-Z0-9]/.test(newPassword)
+    ? "strong" : newPassword.length >= 8 ? "medium" : "weak";
+
   return (
-    <div className="shell">
-      {/* Sidebar — identical structure to Home */}
+    <div className="learnShell">
       <aside className="sidebar">
         <div className="sideLogo">SC</div>
-        <Link className="navBtn" to="/" title="Home" aria-label="Home">
-          <HomeIcon className="navLucide" size={22} />
-        </Link>
+        <Link className="navBtn" to="/" title="Home"><HomeIcon size={22} /></Link>
         <div style={{ flex: 1 }} />
-        <Link className="navBtn navBtnActive" to="/settings" title="Settings" aria-label="Settings">
-          <Settings className="navLucide" size={22} />
-        </Link>
-        <button className="navBtn" title="Logout" aria-label="Logout" onClick={handleLogout}>
-          <LogOut className="navLucide" size={22} />
-        </button>
+        <Link className="navBtn navBtnActive" to="/settings" title="Settings"><Settings size={22} /></Link>
+        <button className="navBtn" title="Logout" onClick={handleLogout}><LogOut size={22} /></button>
       </aside>
 
-      {/* Main content */}
-      <main className="settingsMain">
-        <div className="settingsHeader">
-          <h1 className="settingsTitle">Settings</h1>
-          <p className="settingsSub">Manage your profile and account security.</p>
+      <main className="main">
+        {/* Hero banner */}
+        <div className="card settingsHero">
+          <div className="settingsHeroContent">
+            <div className="settingsHeroText">
+              <div className="cardLabel">Account</div>
+              <h1 className="settingsHeroTitle">Settings</h1>
+              <p className="settingsHeroSub">Manage your profile and account security.</p>
+              <div className="settingsAvatarChip">
+                <div className="settingsInitials">{initials}</div>
+                <div>
+                  <div className="settingsAvatarName">{displayName || "—"}</div>
+                  <div className="settingsAvatarEmail">{email}</div>
+                </div>
+              </div>
+            </div>
+            <img src={teachingImg} className="settingsMascot" alt="" draggable="false" />
+          </div>
         </div>
 
         <div className="settingsSections">
-
-          {/* ── Profile card ─────────────────────────────────────────────── */}
-          <section className="settingsCard">
+          {/* Profile card */}
+          <div className="card settingsCard">
             <div className="settingsCardHeader">
-              <div className="settingsCardTitle">Profile</div>
-              <div className="settingsCardDesc">How others see you in the app.</div>
+              <div className="cardTitle">Profile</div>
+              <div className="planMeta">How others see you in the app.</div>
             </div>
-
-            
-
             <form className="settingsForm" onSubmit={saveProfile}>
               <div className="fieldGroup">
                 <label className="fieldLabel">Display name</label>
-                <input
-                  className="fieldInput"
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  placeholder="Your name"
-                  maxLength={40}
-                />
+                <input className="fieldInput" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Your name" maxLength={40} />
               </div>
-
               <div className="fieldGroup">
                 <label className="fieldLabel">Email</label>
-                <input
-                  className="fieldInput fieldInputDisabled"
-                  value={email}
-                  disabled
-                  title="Email cannot be changed here"
-                />
+                <input className="fieldInput fieldInputDisabled" value={email} disabled />
                 <span className="fieldHint">Contact support to change your email.</span>
               </div>
-
               <div className="formFooter">
                 {profileMsg && (
                   <span className={`statusMsg ${profileMsg.ok ? "statusOk" : "statusErr"}`}>
-                    {profileMsg.ok ? <Check size={14} /> : <X size={14} />}
-                    {profileMsg.text}
+                    {profileMsg.ok ? <Check size={14} /> : <X size={14} />} {profileMsg.text}
                   </span>
                 )}
-                <button
-                  className="saveBtn"
-                  type="submit"
-                  disabled={profileStatus === "saving"}
-                >
+                <button className="saveBtn" type="submit" disabled={profileStatus === "saving"}>
                   {profileStatus === "saving" ? "Saving…" : "Save changes"}
                 </button>
               </div>
             </form>
-          </section>
+          </div>
 
-          {/* ── Password card ─────────────────────────────────────────────── */}
-          <section className="settingsCard">
+          {/* Password card */}
+          <div className="card settingsCard">
             <div className="settingsCardHeader">
-              <div className="settingsCardTitle">Change password</div>
-              <div className="settingsCardDesc">Use a strong password you don't use elsewhere.</div>
+              <div className="cardTitle">Change password</div>
+              <div className="planMeta">Use a strong password you don't use elsewhere.</div>
             </div>
-
             <form className="settingsForm" onSubmit={changePassword}>
               <div className="fieldGroup">
                 <label className="fieldLabel">Current password</label>
-                <input
-                  className="fieldInput"
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                />
+                <input className="fieldInput" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" />
               </div>
-
               <div className="fieldGroup">
                 <label className="fieldLabel">New password</label>
-                <input
-                  className="fieldInput"
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                />
+                <input className="fieldInput" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
               </div>
-
               <div className="fieldGroup">
                 <label className="fieldLabel">Confirm new password</label>
-                <input
-                  className={`fieldInput ${passwordStatus === "mismatch" ? "fieldInputError" : ""}`}
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                />
+                <input className={`fieldInput ${passwordStatus === "mismatch" ? "fieldInputError" : ""}`} type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
               </div>
-
-              {/* Password strength indicator */}
               {newPassword.length > 0 && (
                 <div className="strengthWrap">
-                  <div className="strengthBar">
-                    <div
-                      className="strengthFill"
-                      data-strength={
-                        newPassword.length >= 12 && /[^a-zA-Z0-9]/.test(newPassword) ? "strong"
-                        : newPassword.length >= 8 ? "medium"
-                        : "weak"
-                      }
-                    />
-                  </div>
-                  <span className="strengthLabel">
-                    {newPassword.length >= 12 && /[^a-zA-Z0-9]/.test(newPassword) ? "Strong"
-                      : newPassword.length >= 8 ? "Medium"
-                      : "Weak"}
-                  </span>
+                  <div className="strengthBar"><div className="strengthFill" data-strength={strength} /></div>
+                  <span className="strengthLabel">{strength.charAt(0).toUpperCase() + strength.slice(1)}</span>
                 </div>
               )}
-
               <div className="formFooter">
                 {passwordMsg && (
                   <span className={`statusMsg ${passwordMsg.ok ? "statusOk" : "statusErr"}`}>
-                    {passwordMsg.ok ? <Check size={14} /> : <X size={14} />}
-                    {passwordMsg.text}
+                    {passwordMsg.ok ? <Check size={14} /> : <X size={14} />} {passwordMsg.text}
                   </span>
                 )}
-                <button
-                  className="saveBtn"
-                  type="submit"
-                  disabled={passwordStatus === "saving" || !currentPassword || !newPassword || !confirmPassword}
-                >
+                <button className="saveBtn" type="submit" disabled={passwordStatus === "saving" || !currentPassword || !newPassword || !confirmPassword}>
                   {passwordStatus === "saving" ? "Updating…" : "Update password"}
                 </button>
               </div>
             </form>
-          </section>
-
+          </div>
         </div>
       </main>
     </div>
