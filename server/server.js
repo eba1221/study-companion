@@ -845,3 +845,23 @@ app.post("/api/review/add/:cardId", requireUser, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// ── TASKS ──────────────────────────────────────────────────────────────────
+app.get("/api/tasks", requireUser, async (req, res) => {
+  const [rows] = await pool.query("SELECT * FROM tasks WHERE user_id=? ORDER BY created_at DESC", [req.userId]);
+  res.json(rows);
+});
+app.post("/api/tasks", requireUser, async (req, res) => {
+  const { title } = req.body;
+  if (!title?.trim()) return res.status(400).json({ error: "Title required" });
+  const [r] = await pool.query("INSERT INTO tasks (user_id, title) VALUES (?,?)", [req.userId, title.trim()]);
+  res.json({ id: r.insertId, user_id: req.userId, title: title.trim(), done: 0 });
+});
+app.patch("/api/tasks/:id", requireUser, async (req, res) => {
+  const { done } = req.body;
+  await pool.query("UPDATE tasks SET done=? WHERE id=? AND user_id=?", [done ? 1 : 0, req.params.id, req.userId]);
+  res.json({ ok: true });
+});
+app.delete("/api/tasks/:id", requireUser, async (req, res) => {
+  await pool.query("DELETE FROM tasks WHERE id=? AND user_id=?", [req.params.id, req.userId]);
+  res.json({ ok: true });
+});
