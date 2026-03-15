@@ -1,7 +1,7 @@
 import "./Learn.css";
 import "./Analytics.css";
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Home as HomeIcon, BookOpen, BarChart3, Settings, User, TrendingUp, Target, Clock, AlertTriangle, RefreshCw } from "lucide-react";
 import diagramsMascot from "../assets/Diagrams.png";
 import { getStoredUser } from "../api";
@@ -108,6 +108,14 @@ export default function AnalyticsPage() {
   const kpis = data?.kpis ?? {};
   const weakTopics = data?.weakTopics ?? [];
   const subjects = data?.subjectStats ?? [];
+  const studyChart = useMemo(() => {
+    if (data?.studyChart) return data.studyChart;
+    const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    return Array.from({length:7}, (_,i) => {
+      const d = new Date(Date.now()-(6-i)*86400000);
+      return {label: DAY_LABELS[d.getDay()===0?6:d.getDay()-1]+" "+d.getDate(), mins: 0};
+    });
+  }, [data]);
 
   return (
     <div className="learnShell">
