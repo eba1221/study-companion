@@ -126,8 +126,8 @@ export default function Home() {
 
   async function toggleTask(id) {
     const t = tasks.find(x => x.id === id);
-    setTasks(p => p.map(x => x.id === id ? { ...x, done: x.done ? 0 : 1 } : x));
-    await fetch("https://study-companion-production-cec1.up.railway.app/api/tasks/" + id, { method: "PATCH", headers: { "Content-Type": "application/json", ...getAuthHeaders() }, body: JSON.stringify({ done: !t.done }) }).catch(() => {});
+    setTasks(p => p.filter(x => x.id !== id));
+    await fetch("https://study-companion-production-cec1.up.railway.app/api/tasks/" + id, { method: "DELETE", headers: getAuthHeaders() }).catch(() => {});
   }
   async function addTask() {
     const title = newTask.trim();
