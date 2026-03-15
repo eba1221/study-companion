@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Home as HomeIcon, BookOpen, Settings, User } from "lucide-react";
 import mascotImg from "../assets/Quiz.png";
+import thinkingImg from "../assets/Thinking.png";
 
 const LETTERS = ["A", "B", "C", "D"];
 
