@@ -283,17 +283,7 @@ export default function Home() {
             <div className="pill">{totalCount} tasks</div>
           </div>
 
-          <div className="checklistProgress">
-            <div className="checklistMeta">
-              <span className="checklistCount">{doneCount} / {totalCount} done</span>
-              <span className="checklistPercent">{progressPct}%</span>
-            </div>
-            <div className="progressBar">
-              <div className="progressFill" style={{ width: `${progressPct}%` }} />
-            </div>
-          </div>
-
-          <div className="addTask">
+<div className="addTask">
             <input
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
