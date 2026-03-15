@@ -85,9 +85,7 @@
   gap: 16px;
 }
 
-.settingsCard {
-  max-width: 640px;
-}
+.settingsCard {}
 
 .settingsCardHeader {
   margin-bottom: 22px;
