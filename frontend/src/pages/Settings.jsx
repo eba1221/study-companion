@@ -1,7 +1,7 @@
 import "./Settings.css";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Home as HomeIcon, Settings, LogOut, Camera, Check, X } from "lucide-react";
+import { Home as HomeIcon, Settings, LogOut, Check, X } from "lucide-react";
 import { getStoredUser } from "../api";
 
 const API_BASE = "https://study-companion-production-cec1.up.railway.app";
@@ -141,16 +141,7 @@ export default function SettingsPage() {
               <div className="settingsCardDesc">How others see you in the app.</div>
             </div>
 
-            <div className="avatarRow">
-              <div className="avatar">{initials}</div>
-              <div className="avatarMeta">
-                <div className="avatarName">{displayName || email}</div>
-                <div className="avatarEmail">{email}</div>
-                <button className="avatarBtn">
-                  <Camera size={14} /> Change avatar
-                </button>
-              </div>
-            </div>
+            
 
             <form className="settingsForm" onSubmit={saveProfile}>
               <div className="fieldGroup">
