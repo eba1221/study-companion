@@ -660,6 +660,46 @@ app.get("/api/analytics/health", async (req, res) => {
   }
 });
 
+// ── Update display name ──────────────────────────────────────────────────
+app.patch("/api/users/:id", requireUser, async (req, res) => {
+  try {
+    const { display_name } = req.body;
+    if (!display_name?.trim())
+      return res.status(400).json({ error: "Display name required" });
+
+    await pool.query(
+      "UPDATE users SET display_name = ? WHERE id = ?",
+      [display_name.trim(), req.userId]
+    );
+    res.json({ ok: true, display_name: display_name.trim() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Change password ──────────────────────────────────────────────────────
+app.patch("/api/users/:id/password", requireUser, async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password)
+      return res.status(400).json({ error: "Both passwords required" });
+    if (new_password.length < 8)
+      return res.status(400).json({ error: "New password must be 8+ characters" });
+
+    const [rows] = await pool.query("SELECT password_hash FROM users WHERE id = ?", [req.userId]);
+    if (!rows.length) return res.status(404).json({ error: "User not found" });
+
+    const valid = await bcrypt.compare(current_password, rows[0].password_hash);
+    if (!valid) return res.status(401).json({ error: "Incorrect current password" });
+
+    const hash = await bcrypt.hash(new_password, 12);
+    await pool.query("UPDATE users SET password_hash = ? WHERE id = ?", [hash, req.userId]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ================================================================================
 // Global error handler (keep last)
 // ================================================================================
