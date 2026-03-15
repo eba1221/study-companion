@@ -105,25 +105,35 @@ export default function Home() {
   }, [userId]);
 
   // ── checklist (local state — could be persisted to DB later) ───────────
-  const [tasks, setTasks] = useState([
-    { id: "t1", title: "Daily warm-up",    desc: "Answer 5 quick questions", done: false },
-    { id: "t2", title: "Review weak topic", desc: "Check your analytics",    done: false },
-    { id: "t3", title: "Flashcards",        desc: "10 cards (Biology)",       done: false },
-  ]);
+  const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
 
   const doneCount   = useMemo(() => tasks.filter(t => t.done).length, [tasks]);
   const totalCount  = tasks.length;
   const progressPct = totalCount === 0 ? 0 : Math.round((doneCount / totalCount) * 100);
 
-  function toggleTask(id) { setTasks(p => p.map(t => t.id === id ? { ...t, done: !t.done } : t)); }
-  function addTask() {
+  useEffect(() => {
+    fetch("https://study-companion-production-cec1.up.railway.app/api/tasks", { headers: getAuthHeaders() })
+      .then(r => r.json()).then(d => { if (Array.isArray(d)) setTasks(d); }).catch(() => {});
+  }, []);
+
+  async function toggleTask(id) {
+    const t = tasks.find(x => x.id === id);
+    setTasks(p => p.map(x => x.id === id ? { ...x, done: x.done ? 0 : 1 } : x));
+    await fetch("https://study-companion-production-cec1.up.railway.app/api/tasks/" + id, { method: "PATCH", headers: { "Content-Type": "application/json", ...getAuthHeaders() }, body: JSON.stringify({ done: !t.done }) }).catch(() => {});
+  }
+  async function addTask() {
     const title = newTask.trim();
     if (!title) return;
-    setTasks(p => [...p, { id: crypto.randomUUID(), title, desc: "", done: false }]);
     setNewTask("");
+    const res = await fetch("https://study-companion-production-cec1.up.railway.app/api/tasks", { method: "POST", headers: { "Content-Type": "application/json", ...getAuthHeaders() }, body: JSON.stringify({ title }) });
+    const data = await res.json();
+    setTasks(p => [data, ...p]);
   }
-  function removeTask(id) { setTasks(p => p.filter(t => t.id !== id)); }
+  async function removeTask(id) {
+    setTasks(p => p.filter(t => t.id !== id));
+    await fetch("https://study-companion-production-cec1.up.railway.app/api/tasks/" + id, { method: "DELETE", headers: getAuthHeaders() }).catch(() => {});
+  }
   function handleLogout() { localStorage.removeItem("sc_user"); navigate("/auth"); }
 
   // ── helpers ─────────────────────────────────────────────────────────────
