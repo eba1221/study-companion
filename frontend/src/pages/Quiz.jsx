@@ -371,9 +371,7 @@ export default function QuizPage() {
             {/* GENERATING STAGE */}
             {stage === "generating" && (
               <div style={{ textAlign: "center", padding: "40px 20px" }}>
-                <div style={{ fontSize: "48px", marginBottom: "16px", animation: "pulse 1.5s ease-in-out infinite" }}>
-                  🤖
-                </div>
+                <img src={thinkingImg} alt="Thinking" style={{ width: "80px", marginBottom: "16px", animation: "pulse 1.5s ease-in-out infinite" }} />
                 <h3 style={{ margin: 0, marginBottom: "8px" }}>AI is generating your quiz...</h3>
                 <p style={{ color: "rgba(58, 30, 16, 0.68)", fontSize: "14px" }}>This may take 10-20 seconds</p>
               </div>
