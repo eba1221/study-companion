@@ -26,6 +26,13 @@ async function apiFetch(path) {
   return res.json();
 }
 
+function getAuthHeaders() {
+  try {
+    const user = JSON.parse(localStorage.getItem("sc_user"));
+    const token = user?.token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch { return {}; }
+}
 export default function Home() {
   const navigate     = useNavigate();
   const user         = getStoredUser();
