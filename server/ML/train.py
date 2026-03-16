@@ -16,7 +16,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import classification_report
 from sklearn.pipeline import Pipeline
@@ -158,7 +158,7 @@ def encode_features(df):
 # ── TRAINING ───────────────────────────────────────────────────────────────
 def train():
     print("🔧 Generating synthetic dataset...")
-    df = generate_student_topic_data(n_students=500)
+    df = generate_student_topic_data(n_students=2000)
     print(f"   {len(df)} student-topic rows generated.")
     print(f"   Label distribution:\n{df['label'].value_counts()}\n")
 
@@ -185,6 +185,12 @@ def train():
     ])
 
     model.fit(X_train, y_train)
+
+    print("\n🔁 5-Fold Stratified Cross-Validation:")
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    cv_scores = cross_val_score(model, X, y, cv=cv, scoring="f1_weighted")
+    print(f"   F1 (weighted) per fold: {[round(s,3) for s in cv_scores]}")
+    print(f"   Mean F1: {cv_scores.mean():.3f} ± {cv_scores.std():.3f}")
 
     print("\n📊 Evaluation on held-out test set:")
     y_pred = model.predict(X_test)
