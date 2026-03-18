@@ -1,11 +1,11 @@
-import { StrictMode } from 'react'
+import { StrictMode } from 'react' // identify the potential issues and bug in the react code
 import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+import './index.css' 
+import App from './App.jsx' 
 
-createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById('root')).render( // Find the HTML element with the id root, and put the React application inside it.
   <StrictMode>
     <App />
   </StrictMode>,
 )
-// Thu Mar 12 20:08:10 GMT 2026
+

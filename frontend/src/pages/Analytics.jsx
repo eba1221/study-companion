@@ -126,8 +126,6 @@ export default function AnalyticsPage() {
         <Link className="navBtn" to="/learn"><BookOpen size={22} /></Link>
         <Link className="navBtn navBtnActive" to="/analytics"><BarChart3 size={22} /></Link>
         <div style={{ flex: 1 }} />
-        <Link className="navBtn" to="/settings"><Settings size={22} /></Link>
-        <button className="navBtn"><User size={22} /></button>
       </aside>
 
       <main className="main">

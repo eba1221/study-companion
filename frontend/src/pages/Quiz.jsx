@@ -252,12 +252,6 @@ export default function QuizPage() {
           <span className="navLucide" style={{ fontWeight: 900 }}>?</span>
         </Link>
         <div style={{ flex: 1 }} />
-        <button className="navBtn" title="Settings" aria-label="Settings">
-          <Settings className="navLucide" size={22} />
-        </button>
-        <button className="navBtn" title="Profile" aria-label="Profile">
-          <User className="navLucide" size={22} />
-        </button>
       </aside>
 
       <main className="main">

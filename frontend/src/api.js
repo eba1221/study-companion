@@ -1,11 +1,10 @@
-// frontend/src/api.js
 
-const BASE = "https://study-companion-production-cec1.up.railway.app";
-const LS_USER_KEY = "sc_user";
+const BASE = "https://study-companion-production-cec1.up.railway.app"; //base URL for the backend API
+const LS_USER_KEY = "sc_user"; //key used to store user data (including auth token) in local storage
 
-/* ---------------- Auth (local storage) ---------------- */
+/*Auth (local storage)*/
 
-export function getStoredUser() {
+export function getStoredUser() { // retrieves the stored user data from local storage, parsing it from JSON. If parsing fails, it returns null
   try {
     return JSON.parse(localStorage.getItem(LS_USER_KEY));
   } catch {
@@ -13,22 +12,26 @@ export function getStoredUser() {
   }
 }
 
-export function setStoredUser(user) {
+export function setStoredUser(user) { // saves the user data (including auth token) to local storage as a JSON string
   localStorage.setItem(LS_USER_KEY, JSON.stringify(user));
 }
 
+
+// removes the stored user data from local storage, logging the user out
 export function clearStoredUser() {
   localStorage.removeItem(LS_USER_KEY);
 }
 
+// retrieves the auth token from the stored user data. If no user is stored or if the token is missing, it returns null
 function getToken() {
   const user = getStoredUser();
   return user?.token ?? null;
 }
 
-/* ---------------- Request helpers ---------------- */
+/*request helpers*/
 
-function headers(extra = {}) {
+
+function headers(extra = {}) { // prepares info that goes with every request (data format and auth token if available)
   const token = getToken();
   return {
     "Content-Type": "application/json",
@@ -37,12 +40,12 @@ function headers(extra = {}) {
   };
 }
 
-async function asJson(res) {
-  const text = await res.text();
+async function asJson(res) { // converts the API response to JSON, handling errors appropriately
+  const text = await res.text(); 
   try {
-    const data = text ? JSON.parse(text) : null;
+    const data = text ? JSON.parse(text) : null;  //
     if (!res.ok) {
-      throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+      throw new Error(data?.error || data?.message || `HTTP ${res.status}`); 
     }
     return data;
   } catch {
@@ -51,12 +54,12 @@ async function asJson(res) {
   }
 }
 
-async function GET(path) {
+async function GET(path) { // if used then app wants to retrieve data from backend 
   const res = await fetch(`${BASE}${path}`, { headers: headers() });
   return asJson(res);
 }
 
-async function POST(path, body) {
+async function POST(path, body) { // if used then app wants to send new data to the backend
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: headers(),
@@ -65,7 +68,7 @@ async function POST(path, body) {
   return asJson(res);
 }
 
-async function PUT(path, body) {
+async function PUT(path, body) { // if used then app wants to update data on the backend
   const res = await fetch(`${BASE}${path}`, {
     method: "PUT",
     headers: headers(),
@@ -74,7 +77,7 @@ async function PUT(path, body) {
   return asJson(res);
 }
 
-async function DEL(path) {
+async function DEL(path) { // if used then app wants to delete data on the backend
   const res = await fetch(`${BASE}${path}`, {
     method: "DELETE",
     headers: headers(),
@@ -82,20 +85,22 @@ async function DEL(path) {
   return asJson(res);
 }
 
-/* ---------------- Health ---------------- */
+/*Health */
+
+// checks if the backend and database are healthy by sending a GET request to the /api/health/db endpoint
 
 export async function dbHealth() {
   return GET("/api/health/db");
 }
 
-/* ---------------- Auth ---------------- */
+/* Auth */
 
-export async function login(payload) {
-  const data = await POST("/api/auth/login", payload);
+export async function login(payload) { 
+  const data = await POST("/api/auth/login", payload); // sends the user's login credentials to the backend
   if (data?.user && data?.token) {
-    setStoredUser({ ...data.user, token: data.token });
+    setStoredUser({ ...data.user, token: data.token }); // if the login is successful and the backend returns user data and an auth token
   }
-  return data;
+  return data; // returns the response data from the backend 
 }
 
 export async function register(payload) {
@@ -182,4 +187,3 @@ export async function updateCard(id, front, back) {
 export async function deleteCard(id) {
   return DEL(`/api/cards/${id}`);
 }
-// Fri Mar 13 16:24:59 GMT 2026

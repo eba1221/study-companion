@@ -305,12 +305,6 @@ export default function FlashcardsPage() {
           <BookOpen className="navLucide" size={22} />
         </Link>
         <div style={{ flex: 1 }} />
-        <button className="navBtn" title="Settings" aria-label="Settings">
-          <Settings className="navLucide" size={22} />
-        </button>
-        <button className="navBtn" title="Profile" aria-label="Profile">
-          <User className="navLucide" size={22} />
-        </button>
       </aside>
 
       {/* Main */}
