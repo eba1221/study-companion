@@ -732,6 +732,7 @@ app.get("/api/review/due", requireUser, async (req, res) => {
       LIMIT 20`,
       [req.userId]
     );
+    res.json(rows);  
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
