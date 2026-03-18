@@ -243,6 +243,7 @@ export default function FlashcardsPage() {
       setReviewIndex(0);
       setReviewFlipped(false);
       setReviewResults([]);
+      setBusy(false);
       setMode("review");
     } catch (e) {
       setErrorMsg("Failed to load review cards");
