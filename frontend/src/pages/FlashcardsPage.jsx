@@ -455,7 +455,7 @@ export default function FlashcardsPage() {
                 <div className="cardHeaderRow">
                   <div>
                     <div className="cardTitle">Spaced Repetition Review</div>
-                    <div className="planMeta">SM-2 Algorithm · {reviewQueue.length} cards due</div>
+                    <div className="planMeta">SM-2 Algorithm · {reviewStats?.due ?? reviewQueue.length} cards due</div>
                   </div>
                   <button className="fcBtn fcBtnGhost" onClick={exitReview}>Exit</button>
                 </div>

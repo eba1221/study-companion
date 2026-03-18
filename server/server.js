@@ -729,7 +729,7 @@ app.get("/api/review/due", requireUser, async (req, res) => {
       JOIN decks d ON c.deck_id = d.id
       WHERE cr.user_id = ? AND cr.next_review <= CURDATE()
       ORDER BY cr.next_review ASC
-      LIMIT 20`,
+      LIMIT 100`,
       [req.userId]
     );
     res.json(rows);  
