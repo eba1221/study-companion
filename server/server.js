@@ -720,19 +720,18 @@ app.get("/api/review/due", requireUser, async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT c.id, c.front, c.back, d.name as deck_name,
-              COALESCE(cr.easiness, 2.5) as easiness,
-              COALESCE(cr.interval_days, 1) as interval_days,
-              COALESCE(cr.repetitions, 0) as repetitions,
-              COALESCE(cr.next_review, CURDATE()) as next_review
-       FROM cards c
-       JOIN decks d ON c.deck_id = d.id
-       LEFT JOIN card_reviews cr ON cr.card_id = c.id AND cr.user_id = ?
-       WHERE cr.next_review <= CURDATE() OR cr.next_review IS NULL
-       ORDER BY cr.next_review ASC
-       LIMIT 20`,
+              cr.easiness,
+              cr.interval_days,
+              cr.repetitions,
+              cr.next_review
+       FROM card_reviews cr
+      JOIN cards c ON c.id = cr.card_id
+      JOIN decks d ON c.deck_id = d.id
+      WHERE cr.user_id = ? AND cr.next_review <= CURDATE()
+      ORDER BY cr.next_review ASC
+      LIMIT 20`,
       [req.userId]
     );
-    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
