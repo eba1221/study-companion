@@ -15,21 +15,22 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState({ type: "", text: "" });
 
-  const title = useMemo(() => (mode === "login" ? "Welcome back" : "Create account"), [mode]);
-  const subtitle = useMemo(() =>
+  const title = useMemo(() => (mode === "login" ? "Welcome back" : "Create account"), [mode]); 
+  const subtitle = useMemo(() => 
     mode === "login"
       ? "Sign in to continue your study journey"
       : "Get started with Study Coach today",
     [mode]
   );
-
+// Helper to show error messages
   function showError(text) { setMsg({ type: "error", text }); }
 
-  async function onSubmit(e) {
+  async function onSubmit(e) { 
     e.preventDefault();
     setMsg({ type: "", text: "" });
 
-    if (!email.trim()) return showError("Please enter your email.");
+    if (!email.trim()) return showError("Please enter your email."); // Basic email format check
+
     if (!password.trim()) return showError("Please enter your password.");
 
     if (mode === "register") {
@@ -40,7 +41,7 @@ export default function Auth() {
 
     try {
       setLoading(true);
-      if (mode === "login") {
+      if (mode === "login") { // Login flow
         await login({ email, password });
       } else {
         await register({ name, email, password });
@@ -54,7 +55,7 @@ export default function Auth() {
   }
 
   return (
-    <div className="authPage">
+    <div className="authPage"> // background and layout container
       <div className="authInner">
 
         {/* Mascot */}
@@ -77,10 +78,10 @@ export default function Auth() {
         <div className="authTabs">
           <button
             type="button"
-            className={`authTab ${mode === "login" ? "isActive" : ""}`}
-            onClick={() => { setMode("login"); setMsg({ type: "", text: "" }); }}
+            className={`authTab ${mode === "login" ? "isActive" : ""}`} // Highlight active tab
+            onClick={() => { setMode("login"); setMsg({ type: "", text: "" }); }} 
           >
-            Sign in
+            Sign in 
           </button>
           <button
             type="button"
@@ -92,17 +93,17 @@ export default function Auth() {
         </div>
 
         {/* Form */}
-        <form className="authForm" onSubmit={onSubmit}>
+        <form className="authForm" onSubmit={onSubmit}> 
           {mode === "register" && (
             <div className="authField">
-              <label className="authLabel" htmlFor="name">Name</label>
+              <label className="authLabel" htmlFor="name">Name</label> 
               <input
                 id="name"
-                className="authInput"
+                className="authInput" // Controlled input for name field
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
-                autoComplete="name"
+                autoComplete="name" // Helps browsers autofill the name field
               />
             </div>
           )}
@@ -142,7 +143,7 @@ export default function Auth() {
                 type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                placeholder="••••••••"
+                placeholder="••••••••" // No autocomplete for confirm field to enhance security
                 autoComplete="new-password"
               />
             </div>
@@ -155,7 +156,7 @@ export default function Auth() {
           )}
 
           <button className="authButton" type="submit" disabled={loading}>
-            {loading ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}
+            {loading ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"} // Button text changes based on mode and loading state
           </button>
         </form>
       </div>

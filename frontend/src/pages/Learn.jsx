@@ -1,5 +1,4 @@
 // src/pages/Learn.jsx
-// FULL corrected Learn.jsx (Fix: Notes links now go to /learn/notes)
 
 import "./Learn.css";
 import { Link } from "react-router-dom";

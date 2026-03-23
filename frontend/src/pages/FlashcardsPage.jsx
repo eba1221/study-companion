@@ -467,7 +467,7 @@ export default function FlashcardsPage() {
                 {reviewDone ? (
                   /* Review complete screen */
                   <div className="fcDone">
-                    <div style={{ fontSize: 40, marginBottom: 8 }}>🧠</div>
+                  
                     <div className="continueTitle">Review complete!</div>
                     <div className="continueMeta" style={{ marginBottom: 16 }}>
                       You reviewed {reviewResults.length} cards
