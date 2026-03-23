@@ -700,7 +700,6 @@ app.patch("/api/users/:id/password", requireUser, async (req, res) => {
   }
 });
 
-Output
 
 // ================================================================================
 // GAMIFICATION — XP, Badges, Streaks
