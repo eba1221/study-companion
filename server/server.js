@@ -700,6 +700,160 @@ app.patch("/api/users/:id/password", requireUser, async (req, res) => {
   }
 });
 
+Output
+
+// ================================================================================
+// GAMIFICATION — XP, Badges, Streaks
+// ================================================================================
+
+const BADGES = {
+  first_quiz:        { label: "First Quiz",        emoji: "🎯", desc: "Complete your first quiz" },
+  quiz_streak_3:     { label: "On a Roll",          emoji: "🔥", desc: "Complete 3 quizzes in a row" },
+  perfect_score:     { label: "Perfect Score",      emoji: "⭐", desc: "Score 100% on a quiz" },
+  first_review:      { label: "Memory Trainer",     emoji: "🧠", desc: "Complete your first spaced repetition review" },
+  streak_7:          { label: "7 Day Streak",        emoji: "📅", desc: "Study 7 days in a row" },
+  streak_3:          { label: "3 Day Streak",        emoji: "✅", desc: "Study 3 days in a row" },
+  topic_explorer:    { label: "Topic Explorer",     emoji: "🗺️", desc: "Attempt 5 different topics" },
+  high_achiever:     { label: "High Achiever",      emoji: "🏆", desc: "Score over 80% on 3 quizzes" },
+  dedicated_studier: { label: "Dedicated Studier",  emoji: "📚", desc: "Study for over 60 minutes total" },
+};
+
+const XP_REWARDS = {
+  quiz_completed:    10,
+  perfect_score:     25,
+  review_completed:  5,
+  streak_3:          15,
+  streak_7:          50,
+};
+
+// Get gamification stats for a user
+app.get("/api/gamification", requireUser, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // Get XP
+    const [xpRows] = await pool.query(
+      "SELECT xp FROM user_xp WHERE user_id = ?", [userId]
+    );
+    const xp = xpRows[0]?.xp ?? 0;
+
+    // Get badges
+    const [badgeRows] = await pool.query(
+      "SELECT badge_key, earned_at FROM user_badges WHERE user_id = ? ORDER BY earned_at ASC",
+      [userId]
+    );
+    const earnedBadges = badgeRows.map(b => ({
+      key: b.badge_key,
+      earned_at: b.earned_at,
+      ...BADGES[b.badge_key],
+    }));
+
+    // XP level calculation (every 100 XP = 1 level)
+    const level = Math.floor(xp / 100) + 1;
+    const xpInLevel = xp % 100;
+    const xpToNext = 100 - xpInLevel;
+
+    res.json({ xp, level, xpInLevel, xpToNext, badges: earnedBadges });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Award XP and check for badges (called internally after quiz submit / review)
+app.post("/api/gamification/award", requireUser, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { reason } = req.body; // e.g. "quiz_completed", "perfect_score", "review_completed"
+
+    const xpGain = XP_REWARDS[reason] ?? 0;
+
+    // Upsert XP
+    await pool.query(
+      `INSERT INTO user_xp (user_id, xp) VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE xp = xp + VALUES(xp)`,
+      [userId, xpGain]
+    );
+
+    // Check badge conditions
+    const newBadges = [];
+
+    const [attempts] = await pool.query(
+      `SELECT qa.score, qa.total_questions, qa.completed_at, t.name as topic_name
+       FROM quiz_attempts qa
+       JOIN quizzes q ON qa.quiz_id = q.id
+       JOIN topics t ON q.topic_id = t.id
+       WHERE qa.user_id = ? ORDER BY qa.completed_at ASC`,
+      [userId]
+    );
+
+    const [reviews] = await pool.query(
+      "SELECT COUNT(*) as count FROM card_reviews WHERE user_id = ? AND repetitions > 0",
+      [userId]
+    );
+
+    const [xpRow] = await pool.query("SELECT xp FROM user_xp WHERE user_id = ?", [userId]);
+    const totalXp = xpRow[0]?.xp ?? 0;
+
+    // Helper to award badge if not already earned
+    async function awardBadge(key) {
+      try {
+        await pool.query(
+          "INSERT IGNORE INTO user_badges (user_id, badge_key) VALUES (?, ?)",
+          [userId, key]
+        );
+        const [check] = await pool.query(
+          "SELECT badge_key FROM user_badges WHERE user_id = ? AND badge_key = ?",
+          [userId, key]
+        );
+        if (check.length) newBadges.push({ key, ...BADGES[key] });
+      } catch {}
+    }
+
+    // first_quiz
+    if (attempts.length >= 1) await awardBadge("first_quiz");
+
+    // perfect_score
+    const hasPerfect = attempts.some(a => a.score === a.total_questions);
+    if (hasPerfect) await awardBadge("perfect_score");
+
+    // high_achiever — 3 quizzes over 80%
+    const highScores = attempts.filter(a => (a.score / a.total_questions) >= 0.8);
+    if (highScores.length >= 3) await awardBadge("high_achiever");
+
+    // topic_explorer — 5 unique topics
+    const uniqueTopics = new Set(attempts.map(a => a.topic_name)).size;
+    if (uniqueTopics >= 5) await awardBadge("topic_explorer");
+
+    // first_review
+    if (reviews[0]?.count >= 1) await awardBadge("first_review");
+
+    // streak badges
+    const daySet = new Set(attempts.map(a => new Date(a.completed_at).toDateString()));
+    let streak = 0;
+    const now = Date.now();
+    for (let d = 0; d < 365; d++) {
+      const day = new Date(now - d * 86400000).toDateString();
+      if (daySet.has(day)) streak++;
+      else if (d > 0) break;
+    }
+    if (streak >= 3) await awardBadge("streak_3");
+    if (streak >= 7) await awardBadge("streak_7");
+
+    // dedicated_studier — total study time > 60 mins
+    const [timeRow] = await pool.query(
+      "SELECT SUM(time_taken) as total FROM quiz_attempts WHERE user_id = ?",
+      [userId]
+    );
+    const totalMins = (timeRow[0]?.total ?? 0) / 60;
+    if (totalMins >= 60) await awardBadge("dedicated_studier");
+
+    res.json({ xpGained: xpGain, totalXp, newBadges });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // ================================================================================
 // Global error handler (keep last)
 // ================================================================================

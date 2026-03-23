@@ -111,6 +111,16 @@ export default function Home() {
     loadStats();
   }, [userId]);
 
+  const [gamification, setGamification] = useState(null);
+
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`${API_BASE}/api/gamification`, { headers: getAuthHeaders() })
+      .then(r => r.json())
+      .then(d => setGamification(d))
+      .catch(() => {});
+  }, [userId]);
+
   // ── checklist (local state — could be persisted to DB later) ───────────
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
@@ -310,6 +320,36 @@ export default function Home() {
           </div>
         </div>
 
+      {/* Badges & XP panel */}
+      {gamification && (
+        <div className="panel">
+          <div className="panelHeader">
+            <div className="panelTitle">Level {gamification.level}</div>
+            <div className="pill">{gamification.xp} XP</div>
+          </div>
+          {/* XP progress bar */}
+          <div style={{ margin: "8px 0 14px" }}>
+            <div style={{ height: 8, background: "rgba(58,30,16,0.10)", borderRadius: 999, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${gamification.xpInLevel}%`, background: "linear-gradient(90deg, rgba(58,30,16,0.6), rgba(58,30,16,0.4))", borderRadius: 999, transition: "width 0.8s ease" }} />
+            </div>
+            <div style={{ fontSize: 11, color: "rgba(58,30,16,0.5)", marginTop: 4, fontWeight: 700 }}>
+              {gamification.xpInLevel} / 100 XP to Level {gamification.level + 1}
+            </div>
+          </div>
+          {/* Badges */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {gamification.badges.length === 0 ? (
+              <div style={{ fontSize: 12, color: "rgba(58,30,16,0.45)", fontWeight: 700 }}>Complete a quiz to earn your first badge!</div>
+            ) : (
+              gamification.badges.map(b => (
+                <div key={b.key} title={b.desc} style={{ padding: "4px 10px", borderRadius: 999, background: "rgba(58,30,16,0.07)", border: "1px solid rgba(58,30,16,0.12)", fontSize: 12, fontWeight: 800, cursor: "default" }}>
+                  {b.emoji} {b.label}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
         {/* This Week panel — real data */}
         <div className="panel miniStatsPanel">
           <div className="panelTitle" style={{ marginBottom: "14px" }}>This Week</div>

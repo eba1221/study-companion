@@ -181,6 +181,15 @@ export default function QuizPage() {
       const data = await res.json();
       setResults(data);
       setStage("results");
+      // Award XP after quiz
+      try {
+        const user = JSON.parse(localStorage.getItem("sc_user"));
+        await fetch("https://study-companion-production-cec1.up.railway.app/api/gamification/award", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
+          body: JSON.stringify({ reason: data.percentage === 100 ? "perfect_score" : "quiz_completed" }),
+        });
+      } catch {}
       loadHistory();
     } catch (err) {
       console.error("Failed to submit quiz:", err);
